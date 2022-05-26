@@ -1,0 +1,24 @@
+{
+  "name": "blog",
+  "version": "1.0.0",
+  "description": "sentiger blog",
+  "main": "index.js",
+  "scripts": {
+    "docs:blog": "vuepress dev blog",
+    "docs:theme-hope": "vuepress dev theme-hope",
+    "docs:build": "vuepress build theme-hope",
+    "docs:clean-dev": "vuepress dev theme-hope --clean-cache",
+    "docs:dev": "vuepress dev theme-hope"
+  },
+  "keywords": [
+    "blog"
+  ],
+  "author": "sentiger",
+  "license": "ISC",
+  "devDependencies": {
+    "vuepress": "^2.0.0-beta.46",
+    "@vuepress/client": "^2.0.0-beta.46",
+    "vue": "^3.2.33",
+    "vuepress-theme-hope": "^2.0.0-beta.72"
+  }
+}
