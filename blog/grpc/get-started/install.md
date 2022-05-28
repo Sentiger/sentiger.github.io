@@ -5,9 +5,7 @@ order: 1
 category:
   - gRPC
 tag:
-  - 快速上手
   - 安装
-  - 使用
 ---
 
 ## 安装
