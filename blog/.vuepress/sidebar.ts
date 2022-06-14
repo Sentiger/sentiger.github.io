@@ -11,7 +11,16 @@ export default sidebar({
         "transport/",
       ],
     },
+    {
+      text: "k8s",
+      icon: "creative",
+      prefix: "k8s/",
+      children: [
+        "配套扩展/",
+      ],
+    },
   ],
   "/grpc/": "structure",
+  "/k8s/": "structure",
 });
 
