@@ -65,7 +65,7 @@ Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
 # 将web1的地址转换为veth1-p的地址。这样ngx就能正常接收，且回包的时候，能正常回到veth1-p接口（这种方式一般不用，用下面的智能选择），但是手动配置可以理解原理
 $ iptables -t nat -A POSTROUTING -s 172.31.0.3 -j  SNAT --to-source 192.168.2.20
 
-# 或智能转换（推荐使用）
+# 或智能转换（推荐使用）这里可以自动查找应该出去的ip。好处是如如果出去的ip经常发生变化，无需修改规则
 $ iptables -t nat -A POSTROUTING -s 172.31.0.3 -j  MASQUERADE
 
 # 开启FORWARD功能（默认是关闭的，这个要注意）
