@@ -1,0 +1,53 @@
+import{_ as n}from"./plugin-vue_export-helper.21dcd24c.js";import{o as s,c as a,e}from"./app.19053b60.js";const l={},i=e(`<h2 id="etcd\u5B89\u88C5" tabindex="-1"><a class="header-anchor" href="#etcd\u5B89\u88C5" aria-hidden="true">#</a> etcd\u5B89\u88C5</h2><p><strong>docker\u5B89\u88C5etcd</strong></p><div class="language-bash ext-sh line-numbers-mode"><pre class="language-bash"><code>$ <span class="token function">docker</span> network create --subnet <span class="token number">192.168</span>.2.1/24 etcd
+
+<span class="token function">docker</span> run -d --name etcd <span class="token punctuation">\\</span>
+    --network etcd <span class="token punctuation">\\</span>
+    --publish <span class="token number">2379</span>:2379 <span class="token punctuation">\\</span>
+    --publish <span class="token number">2380</span>:2380 <span class="token punctuation">\\</span>
+    --env <span class="token assign-left variable">ALLOW_NONE_AUTHENTICATION</span><span class="token operator">=</span>yes <span class="token punctuation">\\</span>
+    --env <span class="token assign-left variable">ETCD_ADVERTISE_CLIENT_URLS</span><span class="token operator">=</span>http://etcd-server:2379 <span class="token punctuation">\\</span>
+    bitnami/etcd:latest
+</code></pre><div class="line-numbers" aria-hidden="true"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p><strong>\u6D4B\u8BD5</strong></p><div class="language-bash ext-sh line-numbers-mode"><pre class="language-bash"><code>$ <span class="token function">curl</span> -L http://127.0.0.1:2379/version
+</code></pre><div class="line-numbers" aria-hidden="true"><div class="line-number"></div></div></div><p><strong>flannel\u914D\u7F6E</strong></p><div class="language-bash ext-sh line-numbers-mode"><pre class="language-bash"><code>$ <span class="token function">wget</span> https://github.com/flannel-io/flannel/releases/download/v0.18.1/flannel-v0.18.1-linux-amd64.tar.gz
+
+
+$ <span class="token function">docker</span> <span class="token builtin class-name">exec</span> -it etcd etcdctl put /flannel/network/config <span class="token string">&#39;{ &quot;Network&quot;: &quot;10.5.0.0/16&quot;, &quot;Backend&quot;: {&quot;Type&quot;: &quot;vxlan&quot;}}&#39;</span>
+$ <span class="token function">docker</span> <span class="token builtin class-name">exec</span> -it etcd etcdctl get /flannel/network/config
+
+$ ./flanneld --etcd-endpoints<span class="token operator">=</span>http://172.31.0.3:2379 --etcd-prefix<span class="token operator">=</span>/flannel/network/config
+</code></pre><div class="line-numbers" aria-hidden="true"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p><strong>\u6D4B\u8BD5</strong></p><div class="language-bash ext-sh line-numbers-mode"><pre class="language-bash"><code>$ <span class="token function">ping</span> <span class="token number">11.0</span>.136.12
+</code></pre><div class="line-numbers" aria-hidden="true"><div class="line-number"></div></div></div><h2 id="\u5E7F\u64AD" tabindex="-1"><a class="header-anchor" href="#\u5E7F\u64AD" aria-hidden="true">#</a> \u5E7F\u64AD</h2><p><strong>web1\u6DFB\u52A0</strong></p><div class="language-bash ext-sh line-numbers-mode"><pre class="language-bash"><code>$ <span class="token function">ip</span> <span class="token function">link</span> <span class="token function">add</span> vxlan22 <span class="token builtin class-name">type</span> vxlan <span class="token function">id</span> <span class="token number">22</span> dstport <span class="token number">4790</span> group <span class="token number">229.1</span>.1.2 dev eth0
+$ <span class="token function">ip</span> addr <span class="token function">add</span> <span class="token number">11.0</span>.135.11/24 dev vxlan22
+$ <span class="token function">ip</span> <span class="token function">link</span> <span class="token builtin class-name">set</span> dev vxlan22 up
+</code></pre><div class="line-numbers" aria-hidden="true"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p><strong>web2\u6DFB\u52A0</strong></p><div class="language-bash ext-sh line-numbers-mode"><pre class="language-bash"><code>$ <span class="token function">ip</span> <span class="token function">link</span> <span class="token function">add</span> vxlan22 <span class="token builtin class-name">type</span> vxlan <span class="token function">id</span> <span class="token number">22</span> dstport <span class="token number">4790</span> group <span class="token number">229.1</span>.1.2 dev eth0
+$ <span class="token function">ip</span> addr <span class="token function">add</span> <span class="token number">11.0</span>.135.12/24 dev vxlan22
+$ <span class="token function">ip</span> <span class="token function">link</span> <span class="token builtin class-name">set</span> dev vxlan22 up
+</code></pre><div class="line-numbers" aria-hidden="true"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p><strong>\u5220\u9664\u8BBE\u5907</strong></p><div class="language-bash ext-sh line-numbers-mode"><pre class="language-bash"><code>$ <span class="token function">ip</span> <span class="token function">link</span> <span class="token builtin class-name">set</span> vxlan22 down
+$ <span class="token function">ip</span> <span class="token function">link</span> del vxlan22
+</code></pre><div class="line-numbers" aria-hidden="true"><div class="line-number"></div><div class="line-number"></div></div></div><p><strong>\u6D4B\u8BD5</strong></p><div class="language-bash ext-sh line-numbers-mode"><pre class="language-bash"><code>$ <span class="token function">ping</span> <span class="token number">11.0</span>.135.12
+$ <span class="token function">ping</span> <span class="token number">11.0</span>.135.11
+</code></pre><div class="line-numbers" aria-hidden="true"><div class="line-number"></div><div class="line-number"></div></div></div><h2 id="vxlan-\u5BB9\u5668" tabindex="-1"><a class="header-anchor" href="#vxlan-\u5BB9\u5668" aria-hidden="true">#</a> vxlan+\u5BB9\u5668</h2><p><strong>web1\u521B\u5EFAdocker\u5BB9\u5668\u5E76\u6307\u5B9A\u7F51\u6865</strong></p><div class="language-bash ext-sh line-numbers-mode"><pre class="language-bash"><code><span class="token comment"># \u521B\u5EFA\u7F51\u6865\u6307\u5B9A\u7F51\u6BB5</span>
+$ <span class="token function">docker</span> network create mynet --subnet <span class="token number">11.0</span>.137.0/24
+<span class="token comment"># \u67E5\u770B\u7F51\u6865(\u7F51\u6865\u540D:br-56011e09bd8a)</span>
+$ brctl show
+<span class="token comment"># \u521B\u5EFAngx\u5BB9\u5668\uFF0C\u5E76\u6307\u5B9A\u7F51\u6865\u7F51\u6BB5</span>
+$ <span class="token function">docker</span> run --name ngx1 --rm -d --network mynet --ip <span class="token number">11.0</span>.137.10 nginx:1.18-alpine
+<span class="token comment"># \u521B\u5EFAvxlan</span>
+$ <span class="token function">ip</span> <span class="token function">link</span> <span class="token function">add</span> vxlan23 <span class="token builtin class-name">type</span> vxlan <span class="token function">id</span> <span class="token number">23</span> dstport <span class="token number">4791</span> group <span class="token number">229.1</span>.1.3 dev eth0
+<span class="token comment"># \u542F\u52A8vxlan</span>
+$ <span class="token function">ip</span> <span class="token function">link</span> <span class="token builtin class-name">set</span> vxlan23 up
+<span class="token comment"># \u5C06vxlan\u7ED1\u5B9A\u5230\u7F51\u6865</span>
+$ brctl addif br-56011e09bd8a vxlan23
+</code></pre><div class="line-numbers" aria-hidden="true"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p><strong>web2\u521B\u5EFAdocker\u5BB9\u5668\u5E76\u6307\u5B9A\u7F51\u6865</strong></p><div class="language-bash ext-sh line-numbers-mode"><pre class="language-bash"><code><span class="token comment"># \u521B\u5EFA\u7F51\u6865\u6307\u5B9A\u7F51\u6BB5</span>
+$ <span class="token function">docker</span> network create mynet --subnet <span class="token number">11.0</span>.137.0/24
+<span class="token comment"># \u67E5\u770B\u7F51\u6865(\u7F51\u6865\u540D:br-ccc48adc6068)</span>
+$ brctl show
+<span class="token comment"># \u521B\u5EFAngx\u5BB9\u5668\uFF0C\u5E76\u6307\u5B9A\u7F51\u6865\u7F51\u6BB5</span>
+$ <span class="token function">docker</span> run --name ngx2 --rm -d --network mynet --ip <span class="token number">11.0</span>.137.11 nginx:1.18-alpine
+<span class="token comment"># \u521B\u5EFAvxlan</span>
+$ <span class="token function">ip</span> <span class="token function">link</span> <span class="token function">add</span> vxlan23 <span class="token builtin class-name">type</span> vxlan <span class="token function">id</span> <span class="token number">23</span> dstport <span class="token number">4791</span> group <span class="token number">229.1</span>.1.3 dev eth0
+<span class="token comment"># \u542F\u52A8vxlan</span>
+$ <span class="token function">ip</span> <span class="token function">link</span> <span class="token builtin class-name">set</span> vxlan23 up
+<span class="token comment"># \u5C06vxlan\u7ED1\u5B9A\u5230\u7F51\u6865</span>
+$ brctl addif br-ccc48adc6068 vxlan23
+</code></pre><div class="line-numbers" aria-hidden="true"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><h2 id="\u603B\u7ED3" tabindex="-1"><a class="header-anchor" href="#\u603B\u7ED3" aria-hidden="true">#</a> \u603B\u7ED3</h2>`,24),c=[i];function t(p,o){return s(),a("div",null,c)}var u=n(l,[["render",t],["__file","05-flannel-docker.html.vue"]]);export{u as default};
