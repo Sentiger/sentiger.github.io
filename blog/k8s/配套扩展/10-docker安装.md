@@ -8,18 +8,21 @@ tag:
   - docker
 ---
 
+多个云服务器测试，发现centos7.6的版本比较稳定，flanneld能正常运行，docker依赖好
+
 ## 安装
 
-centos7.2一台新机器上装docker
+centos7.6一台新机器上装docker
 
 ```shell
 # 关闭firewalld
 $  systemctl stop firewalld && systemctl disable firewalld
 
 # 安装iptables，并清空规则
-$ yum install -y iptables.services
+$ yum -y install iptables-services
 $ systemctl enable iptables.service
 $ systemctl start iptables.service
+
 $ iptables -t filter -F
 $ iptables -t nat -F
 
