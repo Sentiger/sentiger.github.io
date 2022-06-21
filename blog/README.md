@@ -5,13 +5,14 @@ icon: home
 title: 主页
 heroImage: 
 heroText: Sentiger日志
-heroFullScreen: true
+heroFullScreen: false
 tagline: Hello World
+blog.timeline: true
 projects:
   - icon: project
     name: GRPC
     desc: GRPC从0到线上
-    link: https://你的项目链接
+    link: /grpc
 
 
 footer: "自律起来"

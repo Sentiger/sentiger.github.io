@@ -2,6 +2,7 @@
 title: 快速开始
 icon: info
 order: 2
+article: false
 category:
   - gRPC
 tag:
