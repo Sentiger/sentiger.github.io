@@ -1,0 +1,44 @@
+# deploy
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: blog-deployment
+  namespace: default
+  labels:
+    app: blog
+spec:
+  replicas: 2
+
+  selector:
+    matchLabels:
+      app: blog
+
+  template:
+    metadata:
+      labels:
+        app: blog
+        version: v1
+    spec:
+      # 定义容器
+      containers:
+        - name: blog
+          image: sentiger/blog:v1
+          imagePullPolicy: Always # IfNotPresent,Never,Always
+          ports:
+            - containerPort: 80
+---
+# service
+apiVersion: v1
+kind: Service
+metadata:
+  name: blog
+  namespace: default
+spec:
+  type: NodePort # 这里暂时使用节点端口映射
+  selector:
+    app: blog
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+      nodePort: 30008 # 这个是有范围的，--service-node-port-range 默认值：30000-32767
