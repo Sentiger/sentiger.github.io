@@ -266,3 +266,8 @@ $ iptables -t nat -A PREROUTING \
 ## 总结
 
 上面流程总体模拟了kube-proxy的职责，以后了解k8s的网络部分应该很轻松。
+
+## 参考
+- 
+- iptables
+![iptables](./assets/iptables.png)
