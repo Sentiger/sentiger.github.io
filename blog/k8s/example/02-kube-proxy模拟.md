@@ -183,9 +183,86 @@ b91ddef153befdb0b5b7dc712d83b7bd14c509e047a2f862c81575fe6fddeac5
 上面的流程分别模拟了夸主机内容器间通信原理，k8s的底层网络通信也是这样实现的，只是有对应的程序来实现。
 
 
-## service代理
+## service/kube-proxy代理
 
-上面的流程实现了主机间通信，现在模拟手工实现k8s中的service代理功能。
+上面的流程实现了主机间通信，现在模拟手工实现k8s中的service代理功能。也就是kube-proxy要干的工作
 
-- 模拟多个多个pod，通过service来代理到具体的pod
+1. 构建一个虚拟ip作为service的ip
+2. 启动多个相同的nginx服务，当做为高可用
+3. 通过service代理访问具体的容器
 
+![kube-proxy](./assets/kube-proxy-iptables.png)
+
+### 部署应用
+
+这里启动应用分别在两个主机上（负载，高可用），这里就模拟了deployment 生成两个pod
+
+```shell
+[root@web1 ~]# docker exec -it ngx1 sh
+/ # echo "I am ngx1 in web1" > /usr/share/nginx/html/index.html
+
+[root@web2 ~]# docker exec -it ngx2 sh
+/ # echo "I am ngx2 in web2" > /usr/share/nginx/html/index.html
+```
+
+### 配置service
+
+- 设置一个虚拟ip 10.20.32.2 作为ngx.service
+- 通过访问10.20.32.2 自动代理到底层服务
+
+```shell
+$ iptables -t nat -A POSTROUTING -j MASQUERADE
+
+$ iptables -t nat -A PREROUTING \
+-p tcp \
+-d 10.20.32.2 \
+--dport 80 \
+-m statistic \
+--mode random \
+--probability 0.5 \
+-j DNAT \
+--to-destination 10.10.26.2:80
+
+
+$ iptables -t nat -A PREROUTING \
+-p tcp \
+-d 10.20.32.2 \
+--dport 80 \
+-m statistic \
+--mode random \
+--probability 1 \
+-j DNAT \
+--to-destination 10.10.28.2:80
+```
+
+**测试**
+
+::: danger
+
+这里需要在容器内访问`10.20.32.2`
+
+原因是：
+1. 通过netfilter了解到，因为10.20.32.2是一个虚拟ip，没有对应的接口，所以想让访问这个要到达宿主机内的内核网络空间。才能走PREROUTING转换
+2. 如果在宿主机内访问，则是从用户空间到内核空间。然后通过路由查找，无法查到10.20.32.2出去到达哪里。就会出现丢失。所以一般在这个时候需要在本地设置10.20.32.2的MAC地址，通过二层链路层来访问
+3. 所以这里简单些，直接在容器内访问，这个时候到达宿主机空间，然后做转发。
+4. 所以使用iptable的时候，是无法ping通service ip的，因为这是一个虚拟ip，没有对应的接口。ping是icmp协议，到达网络层，所以转发无效（在tcp层）
+
+:::
+
+![负载](./assets/balance.png)
+
+
+## DNS绑定域名
+
+上面的例子可以做到service访问底层不同的容器。但是存在一个问题，service IP也是经常变得，更何况在服务间相互调用的时候，是不知道IP的。这个时候需要加一层DNS，或者环境变量了。
+
+1. k8s中在集群内访问service，都可以service.namespace.local这种访问，其实就是kube-proxy在创建service的时候，自动给对应的service ip 和域名绑定了，这个用DNS很好实现。
+
+2. 还有一种就是在创建POD的时候，将先前创建的service ip 写到新创建的pod容器的环境变量中
+
+3. 还有一种就是为啥不直接使用DNS A记录添加多个，使用DNS来做负载均衡，这个官方也有解释就是很多服务第一次DNS访问的时候，会缓存，再次请求就不在走了DNS解析了。
+
+
+## 总结
+
+上面流程总体模拟了kube-proxy的职责，以后了解k8s的网络部分应该很轻松。
