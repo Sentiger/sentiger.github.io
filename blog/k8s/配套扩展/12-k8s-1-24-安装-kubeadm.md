@@ -36,6 +36,10 @@ tag:
 **初始化集群**
 
 ```shell
+$ cat > /etc/sysconfig/kubelet << EOF
+KUBELET_EXTRA_ARGS=--cgroup-driver=systemd
+EOF
+
 $ kubeadm init --apiserver-advertise-address=172.31.0.3 \
 --cri-socket unix:///run/containerd/containerd.sock \
 --image-repository registry.aliyuncs.com/google_containers \
