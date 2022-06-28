@@ -249,7 +249,7 @@ $ iptables -t nat -A OUTPUT \
 --to-destination 10.10.26.2:80
 
 
-$ iptables -t nat -A PREROUTING \
+$ iptables -t nat -A OUTPUT \
 -p tcp \
 -d 10.20.32.2 \
 --dport 80 \
