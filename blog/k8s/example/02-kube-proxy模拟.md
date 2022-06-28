@@ -213,7 +213,32 @@ b91ddef153befdb0b5b7dc712d83b7bd14c509e047a2f862c81575fe6fddeac5
 ```shell
 $ iptables -t nat -A POSTROUTING -j MASQUERADE
 
+# PREROUTING 这里是为了从容器中访问service
 $ iptables -t nat -A PREROUTING \
+-p tcp \
+-d 10.20.32.2 \
+--dport 80 \
+-m statistic \
+--mode random \
+--probability 0.5 \
+-j DNAT \
+--to-destination 10.10.26.2:80
+
+
+$ iptables -t nat -A PREROUTING \
+-p tcp \
+-d 10.20.32.2 \
+--dport 80 \
+-m statistic \
+--mode random \
+--probability 1 \
+-j DNAT \
+--to-destination 10.10.28.2:80
+
+
+
+# OUTPUT 这个链是从宿主机中请求service的时候，做目的地址转换
+$ iptables -t nat -A OUTPUT \
 -p tcp \
 -d 10.20.32.2 \
 --dport 80 \
@@ -239,13 +264,10 @@ $ iptables -t nat -A PREROUTING \
 
 ::: danger
 
-这里需要在容器内访问`10.20.32.2`
+这里service IP 是一个虚拟IP，所以要针对它的访问做一些拦截处理（DNAT），访问的入口有两个：
 
-原因是：
-1. 通过netfilter了解到，因为10.20.32.2是一个虚拟ip，没有对应的接口，所以想让访问这个要到达宿主机内的内核网络空间。才能走PREROUTING转换
-2. 如果在宿主机内访问，则是从用户空间到内核空间。然后通过路由查找，无法查到10.20.32.2出去到达哪里。就会出现丢失。所以一般在这个时候需要在本地设置10.20.32.2的MAC地址，通过二层链路层来访问
-3. 所以这里简单些，直接在容器内访问，这个时候到达宿主机空间，然后做转发。
-4. 所以使用iptable的时候，是无法ping通service ip的，因为这是一个虚拟ip，没有对应的接口。ping是icmp协议，到达网络层，所以转发无效（在tcp层）
+1. 从宿主机中访问，就是从用户态到内核态，此时走的是OUTPUT 链，这个时候就需要在OUTPUT上做DNAT转换。
+2. 还有就是从容器中访问最后转发到了宿主机的网络协议栈。此时要对PREROUTING做DNAT
 
 :::
 
