@@ -30,9 +30,73 @@ image规范了如何制作镜像
 
 [cri]这个是k8s官方指定的一个接入容器的规范。是以RPC接口调用，接下来我们自己写GRPC客户端可以调用
 
+**下载客户端**
+
 ```shell
+# 下载GRPC库，使用客户端调用
 $ go get -u google.golang.org/grpc 
+# 这个要不要无所谓，可直接在 cri 定义的proto文件中下载，自己生成pb.go文件，只是这里里面有给编译好的
 $ go get -u k8s.io/cri-api
+```
+
+**客户端调用**
+
+调用containerd。因为containerd实现了CRI接口，所以可以直接调用，无需关心containerd实现的原理
+
+:::danger
+
+这应该调用的版本根据containerd的实际版本来，目前有v1和v1alpha2这两个版本，具体查看可通过
+
+```shell
+[root@web2 runc]# crictl version
+Version:  0.1.0
+RuntimeName:  containerd
+RuntimeVersion:  1.6.6
+RuntimeApiVersion:  v1
+```
+
+:::
+
+```go
+func main() {
+	addr := "unix:///run/containerd/containerd.sock"
+	conn, err := grpc.Dial(addr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		log.Fatalln("连接失败", err)
+	}
+	defer func() { _ = conn.Close() }()
+
+	req := &v1.VersionRequest{}
+
+	service := v1.NewRuntimeServiceClient(conn)
+	resp, err := service.Version(context.Background(), req)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	fmt.Println(resp)
+}
+
+
+// 或者直接调用
+func main() {
+	addr := "unix:///run/containerd/containerd.sock"
+	conn, err := grpc.Dial(addr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		log.Fatalln("连接失败", err)
+	}
+	defer func() { _ = conn.Close() }()
+	req := &v1.VersionRequest{}
+	resp := &v1.VersionResponse{}
+	err = conn.Invoke(context.Background(), "runtime.v1.RuntimeService/Version", req, resp)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	fmt.Println(resp)
+}
 ```
 
 
