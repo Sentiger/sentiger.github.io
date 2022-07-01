@@ -14,7 +14,7 @@ export default hopeTheme({
 
   iconAssets: "//at.alicdn.com/t/font_2410206_a0xb9hku9iu.css",
 
-  logo: "/logo.svg",
+  logo: "/logo.jpeg",
 
   docsBranch:"master",
   repo: "sentiger/sentiger.github.io",
@@ -41,7 +41,7 @@ export default hopeTheme({
 
   blog: {
     name:"Sentiger",
-    description: "一个自由写作者",
+    description: "随便写写",
   },
 
   encrypt: {

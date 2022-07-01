@@ -3,7 +3,7 @@ import theme from "./theme";
 
 export default defineUserConfig({
   lang: "zh-CN",
-  title: "生活记录篇",
+  title: "不完全记忆",
   description: "bolg，k8s，go，grpc",
 
   base: "/",
