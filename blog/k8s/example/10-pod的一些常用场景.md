@@ -1,6 +1,5 @@
 ---
 title: Pod的一些常用场景
-icon: install
 order: 10
 category:
   - k8s

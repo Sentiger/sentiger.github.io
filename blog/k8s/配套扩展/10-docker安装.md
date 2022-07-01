@@ -1,6 +1,5 @@
 ---
 title: docker安装
-icon: install
 order: 10
 category:
   - k8s

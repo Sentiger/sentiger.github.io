@@ -1,6 +1,6 @@
 ---
 title: Linux
-icon: creative
+icon: linux
 index: false
 article: false
 dir:

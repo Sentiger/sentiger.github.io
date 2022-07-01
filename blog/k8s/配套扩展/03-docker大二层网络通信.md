@@ -1,6 +1,5 @@
 ---
 title: 大二层网络通信
-icon: install
 order: 3
 category:
   - k8s

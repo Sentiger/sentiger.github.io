@@ -1,6 +1,5 @@
 ---
 title: docker网桥原理
-icon: install
 order: 1
 category:
   - k8s

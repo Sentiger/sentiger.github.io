@@ -1,6 +1,5 @@
 ---
 title: 安装/使用
-icon: install
 order: 1
 article: false
 category:

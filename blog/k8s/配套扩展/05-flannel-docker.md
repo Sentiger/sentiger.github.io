@@ -1,6 +1,5 @@
 ---
 title: flannel组件配置docker通信
-icon: install
 order: 5
 category:
   - k8s

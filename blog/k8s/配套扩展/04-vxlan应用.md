@@ -1,6 +1,5 @@
 ---
 title: vxlan操作
-icon: install
 order: 4
 category:
   - k8s

@@ -1,7 +1,6 @@
 ---
 title: OCI及CRI规范
 date: 2022-06-28
-icon: install
 order: 20
 category:
   - k8s

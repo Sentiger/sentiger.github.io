@@ -1,6 +1,5 @@
 ---
 title: 简单的CICD
-icon: install
 order: 1
 category:
   - k8s

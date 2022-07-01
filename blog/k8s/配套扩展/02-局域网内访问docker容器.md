@@ -1,6 +1,5 @@
 ---
 title: 局域网内访问docker容器
-icon: install
 order: 2
 category:
   - k8s

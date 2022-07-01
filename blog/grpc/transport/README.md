@@ -1,6 +1,6 @@
 ---
 title: gRPC通信模式
-icon: creative
+icon: number
 index: false
 dir:
   order: 2

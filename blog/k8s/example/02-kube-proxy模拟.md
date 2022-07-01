@@ -1,6 +1,5 @@
 ---
 title: 模拟kube-proxy service实现
-icon: install
 order: 2
 category:
   - k8s

@@ -1,6 +1,6 @@
 ---
 title: 示例
-icon: creative
+icon: list
 index: false
 article: false
 dir:

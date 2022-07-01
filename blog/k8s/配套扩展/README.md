@@ -1,6 +1,6 @@
 ---
 title: 配套扩展
-icon: creative
+icon: expansion
 index: false
 article: false
 dir:

@@ -1,7 +1,6 @@
 ---
 title: k8s安装(1.24)-kubeadm
 date: 2022-06-27
-icon: install
 order: 11
 category:
   - k8s
