@@ -2,8 +2,8 @@ import { navbar } from "vuepress-theme-hope";
 
 export default navbar([
   "/",
-  { text: "gRPC", icon: "creative", link: "/grpc/" },
-  { text: "k8s", icon: "creative", link: "/k8s/" },
-  // "/guide/",
+  { text: "gRPC", icon: "api", link: "/grpc/" },
+  { text: "k8s", icon: "class", link: "/k8s/" },
+  { text: "MySQL", icon: "mysql", link: "/mysql/" },
   // "/config/",
 ]);
