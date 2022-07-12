@@ -23,9 +23,16 @@ export default sidebar({
       children: [
       ],
     },
+    {
+      text: "杂项",
+      prefix: "other/",
+      children: [
+      ],
+    },
   ],
   "/grpc/": "structure",
   "/k8s/": "structure",
   "/mysql/": "structure",
+  "/other/": "structure",
 });
 
