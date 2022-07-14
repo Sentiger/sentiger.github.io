@@ -2,6 +2,7 @@
 node_modules
 .temp
 .cache
+.DS_Store
 node_modules/
 blog/.vuepress/.cache/
 blog/.vuepress/.temp/
