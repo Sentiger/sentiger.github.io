@@ -1,6 +1,6 @@
 ---
 title: Innodb Buffer Poll
-order: 8
+order: 9
 date: 2022-07-19
 category:
   - MySQL
