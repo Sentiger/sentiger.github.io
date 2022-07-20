@@ -18,6 +18,13 @@ export default sidebar({
       ],
     },
     {
+      text: "Golang",
+      prefix: "go/",
+      children: [
+        "Golang/",
+      ],
+    },
+    {
       text: "MySQL",
       prefix: "mysql/",
       children: [
@@ -32,6 +39,7 @@ export default sidebar({
   ],
   "/grpc/": "structure",
   "/k8s/": "structure",
+  "/go/": "structure",
   "/mysql/": "structure",
   "/other/": "structure",
 });
