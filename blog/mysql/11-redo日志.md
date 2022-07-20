@@ -18,7 +18,7 @@ category:
 
 ## redo格式
 
-![redo](assets/redo.jpg)
+![redo](./assets/redo.jpg)
 
 - type ：该条 redo 日志的类型。在 MySQL 5.7.21 这个版本中，redo 日志设计了53种不同的类型
 - space ID ：表空间ID。
