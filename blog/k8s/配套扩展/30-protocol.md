@@ -8,6 +8,8 @@ category:
 
 ## containerd
 
+![containerd-p.png](./assets/containerd-p.png)
+
 1. containerd是一个守护进程
 2. 可以通过`OCI`接口来调用对应的容器（1.6.8版本通过containerd-shim-v2插件实现）
 3. 可以通过`CNI`接口协议来调用任意CNI插件
