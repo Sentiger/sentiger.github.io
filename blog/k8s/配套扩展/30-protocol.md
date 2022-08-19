@@ -178,4 +178,13 @@ b7fe152f8527    docker.io/library/redis:alpine    "docker-entrypoint.s…"    14
 ## CRI接口协议
 
 
+## 实验室
+1. 二层网络通信
+2. iptables配置
+3. CNI插件的调用
+4. containerd的架构
+5. service实现
+6. coreDNS 
+
+
 [containerd安装文档]: https://github.com/containerd/containerd/blob/main/docs/getting-started.md
