@@ -112,6 +112,15 @@ deployment是一个更高级的控制器，用来管理replicaset，提供滚动
 2. 然后rs中有一个`Controlled By:  Deployment/nginx-deployment-2`。即使是定义标签selector相同的，也是能区分，被谁控制了。
 3. 如果手动创建rs，则rs是没有被上层控制器所管理，如果标签和能被deployment匹配上，则被接管，然后删除rs中的pod
 
+**注意**
+像很多管理软件，则直接是通过标签选择，而忽略了rs是否被哪个deployment所管理，然后列出其中的pod也是完全通过标签来实现的。这里其实是有问题的
+
+例如rancher中就有这个问题
+
+![img.png](assets/rancher-pod.png)
+
+
+
 ```shell
 [root@web1 command]# kubectl describe deployments.apps ngx-dep 
 Name:                   ngx-dep
