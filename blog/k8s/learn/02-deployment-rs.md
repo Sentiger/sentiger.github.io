@@ -120,6 +120,29 @@ deployment是一个更高级的控制器，用来管理replicaset，提供滚动
 ![img.png](assets/rancher-pod.png)
 
 
+### 上线状态，历史版本
+
+deployment是一个更高级的控制器，提供上线操作（滚动更新），历史版本回退等信息很强大。触发上线操作只有template更改了。对于副本数增加减少是不会触发的。
+
+```shell
+# 查看上线状态 rollout 上线
+kubectl rollout status deployment nginx-deployment
+
+# 查看历史版本
+kubectl rollout history deployment nginx-deployment
+# REVERSION: 版本，CHANGE-CAUSE是版本记录描述，这个是引用annotations: 中的kubernetes.io/change-cause: 版本日志
+# 手动更新日志 kubectl annotate deployments.apps nginx-deployment kubernetes.io/change-cause='测试版 本'
+#deployment.apps/nginx-deployment 
+#REVISION  CHANGE-CAUSE
+#1         nginx镜像版本为nginx
+
+# 查看历史版本详细信息
+kubectl rollout history deployment nginx-deployment --revision 2
+
+# 版本回退
+kubectl rollout undo deployment nginx-deployment --to-revision 1
+```
+
 
 ```shell
 [root@web1 command]# kubectl describe deployments.apps ngx-dep 
