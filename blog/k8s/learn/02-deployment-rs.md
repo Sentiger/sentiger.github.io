@@ -142,6 +142,9 @@ kubectl rollout history deployment nginx-deployment --revision 2
 # 版本回退
 kubectl rollout undo deployment nginx-deployment --to-revision 1
 
+# 版本原理
+# 发布一个新的更新，则会生成一个新的rs，然后将旧的rs中的pod滚动更新为0，所以版本回退是回退到指定的rs。默认是保留10个rs，可以配置
+.spec.revisionHistoryLimit
 
 # 暂停上线,就是在进行template等操作之后，暂时不发布，而是等修改完之后，等待在发布
 kubectl rollout pause deployment nginx-deployment
