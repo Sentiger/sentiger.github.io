@@ -141,6 +141,17 @@ kubectl rollout history deployment nginx-deployment --revision 2
 
 # 版本回退
 kubectl rollout undo deployment nginx-deployment --to-revision 1
+
+
+# 暂停上线,就是在进行template等操作之后，暂时不发布，而是等修改完之后，等待在发布
+kubectl rollout pause deployment nginx-deployment
+
+# 恢复上线
+kubectl rollout resume deployment nginx-deployment 
+
+# 重新部署
+kubectl rollout restart deployment nginx-deployment
+
 ```
 
 
