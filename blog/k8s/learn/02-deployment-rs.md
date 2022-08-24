@@ -107,6 +107,11 @@ deployment是一个更高级的控制器，用来管理replicaset，提供滚动
  所以为了出现这个问题：label不能随意定义
 ```
 
+### 管理rs
+1. deployment也是通过标签找到对应的rs
+2. 然后rs中有一个`Controlled By:  Deployment/nginx-deployment-2`。即使是定义标签selector相同的，也是能区分，被谁控制了。
+3. 如果手动创建rs，则rs是没有被上层控制器所管理，如果标签和能被deployment匹配上，则被接管，然后删除rs中的pod
+
 ```shell
 [root@web1 command]# kubectl describe deployments.apps ngx-dep 
 Name:                   ngx-dep
