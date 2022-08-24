@@ -53,6 +53,42 @@ Events:
    Pod 立即被此 ReplicaSet 获得。
 3. 对于独立的Pod没有被控制器所管理，如果标签和rs选择标签一致，则会被接管
 
+### 标签选择
+```shell
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: nginx-rs
+  namespace: default
+  labels:
+    app: nginx
+    version: v1
+  annotations:
+    author: sentiger
+
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+    matchExpressions:
+    - {key: app, operator: In, values: [nginx]}
+    - {key: app, operator: NotIn, values: [mysql]}
+    - {key: app, operator: Exists}
+    - {key: pod, operator: DoesNotExist}
+
+  template:
+    metadata:
+      labels:
+        app: nginx
+        version: v1
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: web1
+      containers:
+      - name: nginx
+        image: nginx:1.18-alpine
+```
 
 ## Deployment
 
