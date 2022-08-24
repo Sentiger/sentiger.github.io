@@ -117,7 +117,7 @@ deployment是一个更高级的控制器，用来管理replicaset，提供滚动
 
 例如rancher中就有这个问题
 
-![img.png](assets/rancher-pod.png)
+![img.png](./assets/rancher-pod.png)
 
 
 ### 上线状态，历史版本
