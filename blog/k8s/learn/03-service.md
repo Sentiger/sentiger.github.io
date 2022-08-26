@@ -12,6 +12,7 @@ service是给后端pod提供访问的入口，能够提供后端pod负载均衡�
 
 - [service]
 - [service-api]
+- [模拟kube-proxy-service实现]
 
 ## 创建一个后端服务
 
@@ -238,6 +239,11 @@ spec:
 
 ```
 
+## 总结
+
+这些基本都是通过iptables来实现的。所以一定要对iptables非常熟悉，理解这些起来都很简单
+
 [service]: https://kubernetes.io/zh-cn/docs/concepts/services-networking/service/
 [service-api]: https://kubernetes.io/zh-cn/docs/reference/kubernetes-api/service-resources/service-v1/
+[模拟kube-proxy-service实现]: ../example/02-kube-proxy模拟.md
 
