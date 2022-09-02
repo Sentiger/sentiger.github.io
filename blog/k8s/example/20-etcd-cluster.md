@@ -72,6 +72,84 @@ etcdctl --endpoints=$ENDPOINTS endpoint status -w table
 
 ```
 
+## k8s部署
+
+k8静态部署主要是注意集群几点ip，这个时候就要使用statefulset和headless service
+
+**注意**
+- service是要等到pod为ready状态的时候才能进行监听这些服务
+- 这里pod里面又要使用到了service为其解析ip，所以会和上面service进行冲突，因为两个都没准备好。
+- publishNotReadyAddresses: true 这个是设置如果pod没有ready也会加入到endpoints中
+- 在启动命令中，pod域名要写完整了。否则nslookup解析不了。例如etcd-0.etcd 这个是解析不了的。要写完整etcd-0.etcd.default.svc.cluster.local。因为这个找了好久，好坑
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: etcd
+spec:
+  ports:
+    - port: 2379
+      name: client
+    - port: 2380
+      name: peer
+  clusterIP: None
+  selector:
+    app: etcd-member
+  publishNotReadyAddresses: true 
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: etcd
+  labels:
+    app: etcd
+spec:
+  serviceName: etcd
+  replicas: 3
+  selector:
+    matchLabels:
+      app: etcd-member
+  template:
+    metadata:
+      name: etcd
+      labels:
+        app: etcd-member
+    spec:
+      containers:
+      - name: etcd
+        image: "quay.io/coreos/etcd:v3.5.4"
+        ports:
+        - containerPort: 2379
+          name: client
+        - containerPort: 2389
+          name: peer
+        env:
+        - name: CLUSTER_SIZE
+          value: "3"
+        - name: SET_NAME
+          value: "etcd"
+        command:
+        - "/bin/sh"
+        - "-exc"
+        - |
+           IP=$(hostname -i)
+           PEERS=""
+           for i in $(seq 0 $((${CLUSTER_SIZE} - 1)));
+           do
+             PEERS="${PEERS}${PEERS:+,}${SET_NAME}-${i}=http://${SET_NAME}-${i}.${SET_NAME}.default.svc.cluster.local:2380"
+           done
+           
+           exec  etcd --name ${HOSTNAME} \
+           --listen-peer-urls http://${IP}:2380 \
+           --listen-client-urls http://${IP}:2379,http://127.0.0.1:2379 \
+           --advertise-client-urls http://${HOSTNAME}.${SET_NAME}.default.svc.cluster.local:2379 \
+           --initial-advertise-peer-urls http://${HOSTNAME}.${SET_NAME}.default.svc.cluster.local:2380 \
+           --initial-cluster-token etcd-cluster-1 \
+           --initial-cluster=${PEERS} \
+           --initial-cluster-state new \
+           --data-dir=data.etcd
+```
 
 [官网]: https://etcd.io/docs/v3.5/tutorials/how-to-setup-cluster/
 [k8s参考资料1]: https://www.cnblogs.com/zuoyang/p/16423791.html
