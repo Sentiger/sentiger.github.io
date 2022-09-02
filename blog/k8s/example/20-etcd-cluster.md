@@ -81,6 +81,7 @@ k8静态部署主要是注意集群几点ip，这个时候就要使用statefulse
 - 这里pod里面又要使用到了service为其解析ip，所以会和上面service进行冲突，因为两个都没准备好。
 - publishNotReadyAddresses: true 这个是设置如果pod没有ready也会加入到endpoints中
 - 在启动命令中，pod域名要写完整了。否则nslookup解析不了。例如etcd-0.etcd 这个是解析不了的。要写完整etcd-0.etcd.default.svc.cluster.local。因为这个找了好久，好坑
+- **注意**，这里要进行目录挂载，否则在扩容或者删除pod重启会失败  
 ```yaml
 apiVersion: v1
 kind: Service
