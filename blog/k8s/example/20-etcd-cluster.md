@@ -38,8 +38,8 @@ CLUSTER=${NAME_1}=http://${HOST_1}:2380,${NAME_2}=http://${HOST_2}:2380,${NAME_3
 THIS_NAME=${NAME_1}
 THIS_IP=${HOST_1}
 
-nerdctl run --name ${THIS_NAME} --network etcd --ip ${THIS_IP} -d quay.io/coreos/etcd:v3.5.4 etcd  \
---data-dir=data.etcd --name ${THIS_NAME} \
+nerdctl run --name ${THIS_NAME} --network etcd --ip ${THIS_IP} -v /root/etcd/${THIS_NAME}:/var/lib/etcd -d quay.io/coreos/etcd:v3.5.4 etcd  \
+--data-dir=/var/lib/etcd --name ${THIS_NAME} \
 --initial-advertise-peer-urls http://${THIS_IP}:2380 --listen-peer-urls http://${THIS_IP}:2380 \
 --advertise-client-urls http://${THIS_IP}:2379 --listen-client-urls http://${THIS_IP}:2379 \
 --initial-cluster ${CLUSTER} \
@@ -96,8 +96,7 @@ spec:
   clusterIP: None
   selector:
     app: etcd-member
-  publishNotReadyAddresses: true 
-
+  publishNotReadyAddresses: true
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -107,7 +106,7 @@ metadata:
     app: etcd
 spec:
   serviceName: etcd
-  replicas: 3
+  replicas: 4
   selector:
     matchLabels:
       app: etcd-member
@@ -117,39 +116,54 @@ spec:
       labels:
         app: etcd-member
     spec:
+      nodeName: web1
+      volumes:
+        - name: etcd
+          hostPath:
+            path: /root/data/etcd
+            type: Directory
       containers:
-      - name: etcd
-        image: "quay.io/coreos/etcd:v3.5.4"
-        ports:
-        - containerPort: 2379
-          name: client
-        - containerPort: 2389
-          name: peer
-        env:
-        - name: CLUSTER_SIZE
-          value: "3"
-        - name: SET_NAME
-          value: "etcd"
-        command:
-        - "/bin/sh"
-        - "-exc"
-        - |
-           IP=$(hostname -i)
-           PEERS=""
-           for i in $(seq 0 $((${CLUSTER_SIZE} - 1)));
-           do
-             PEERS="${PEERS}${PEERS:+,}${SET_NAME}-${i}=http://${SET_NAME}-${i}.${SET_NAME}.default.svc.cluster.local:2380"
-           done
-           
-           exec  etcd --name ${HOSTNAME} \
-           --listen-peer-urls http://${IP}:2380 \
-           --listen-client-urls http://${IP}:2379,http://127.0.0.1:2379 \
-           --advertise-client-urls http://${HOSTNAME}.${SET_NAME}.default.svc.cluster.local:2379 \
-           --initial-advertise-peer-urls http://${HOSTNAME}.${SET_NAME}.default.svc.cluster.local:2380 \
-           --initial-cluster-token etcd-cluster-1 \
-           --initial-cluster=${PEERS} \
-           --initial-cluster-state new \
-           --data-dir=data.etcd
+        - name: etcd
+          image: "quay.io/coreos/etcd:v3.5.4"
+          ports:
+            - containerPort: 2379
+              name: client
+            - containerPort: 2389
+              name: peer
+          env:
+            - name: CLUSTER_SIZE
+              value: "4"
+            - name: SET_NAME
+              value: "etcd"
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.name
+          volumeMounts:
+            - name: etcd
+              mountPath: /var/lib/etcd/
+              subPathExpr: $(POD_NAME)
+          command:
+            - "/bin/sh"
+            - "-exc"
+            - |
+              IP=$(hostname -i)
+              PEERS=""
+              for i in $(seq 0 $((${CLUSTER_SIZE} - 1)));
+              do
+                PEERS="${PEERS}${PEERS:+,}${SET_NAME}-${i}=http://${SET_NAME}-${i}.${SET_NAME}.default.svc.cluster.local:2380"
+              done
+
+              exec  etcd --name ${HOSTNAME} \
+              --listen-peer-urls http://${IP}:2380 \
+              --listen-client-urls http://${IP}:2379,http://127.0.0.1:2379 \
+              --advertise-client-urls http://${HOSTNAME}.${SET_NAME}.default.svc.cluster.local:2379 \
+              --initial-advertise-peer-urls http://${HOSTNAME}.${SET_NAME}.default.svc.cluster.local:2380 \
+              --initial-cluster-token etcd-cluster-1 \
+              --initial-cluster=${PEERS} \
+              --initial-cluster-state new \
+              --data-dir=/var/lib/etcd/data.etcd
 ```
 
 [官网]: https://etcd.io/docs/v3.5/tutorials/how-to-setup-cluster/
