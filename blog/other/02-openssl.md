@@ -52,6 +52,8 @@ openssl rsa -noout -text -in
 ```
 1. 生成证书请求文件
 openssl req -new -key ca.key -out ca.csr
+# 组织可以是多个，这样是一个数组
+openssl req -new -key ca.key -subj '/CN=jbeda/O=app1/O=app2' -out ca.csr
 
 2. 提取证书请求文件里面信息
 openssl req -in ca.csr -text -noout
