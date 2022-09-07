@@ -49,26 +49,26 @@ Usage: iptables -[ACD] chain rule-specification [options]
 
 ### Options
 
-| 缩写  | 完整命令                 | 后面跟内容               | 说明                                   |
-|-----|----------------------|---------------------|--------------------------------------|
-| -4  | --ipv4               |                     |                                      |
-| -6  | --ipv6               |                     |                                      |
-| -p  | --protocol           | proto               | 指定协议 tcp,udp,icmp                    |
-| -s  | --source             | address[/mask][...] | 源地址                                  |
-| -d  | --destination        | address[/mask][...] | 目标地址                                 |
-| -i  | --in-interface       | input name[+]       | 网卡                                   |
-| -j  | --jump               | target              | 执行结果，可以跳转到自定义的操作链                    |
-| -g  | --goto               | chain               | 直接跳转到链上，不返回                          |
-| -m  | --match              | chain               | 扩展操作                                 |
-| -n  | --numeric            |                     | 将输出的语义词为完整的数字表达，例如anywhere-> 0.0.0.0 |
-| -v  | --verbose            |                     | 详细信息列出                               |
-| -w  | --wait               | [seconds]           | 放弃前获取表锁的最长等待时间                       |
-| -W  | --wait-interval      | [usecs]             | 尝试获取                                 |
-|     | --line-numbers       |                     | 打印的时候显示行号                            |
-| -x  | --exact              |                     | 展开数字(显示精确值)                          |
-| -f  | --fragment           |                     | 仅匹配第二个或更多片段                          |
-|     | --modprobe=<command> |                     | 尝试使用此命令插入模块                          |
-|     | --set-counters       | PKTS BYTES          | 在插入/附加期间设置计数器                        |
+| 缩写  | 完整命令               | 后面跟内容               | 说明                                 |
+|-----|--------------------|---------------------|------------------------------------|
+| -4  | --ipv4             |                     |                                    |
+| -6  | --ipv6             |                     |                                    |
+| -p  | --protocol         | proto               | 指定协议 tcp,udp,icmp                  |
+| -s  | --source           | address[/mask][...] | 源地址                                |
+| -d  | --destination      | address[/mask][...] | 目标地址                               |
+| -i  | --in-interface     | input name[+]       | 网卡                                 |
+| -j  | --jump             | target              | 执行结果，可以跳转到自定义的操作链                  |
+| -g  | --goto             | chain               | 直接跳转到链上，不返回                        |
+| -m  | --match            | chain               | 扩展操作                               |
+| -n  | --numeric          |                     | 将输出的语义词为完整的数字表达，例如anywhere 0.0.0.0 |
+| -v  | --verbose          |                     | 详细信息列出                             |
+| -w  | --wait             | [seconds]           | 放弃前获取表锁的最长等待时间                     |
+| -W  | --wait-interval    | [usecs]             | 尝试获取                               |
+| -   | --line-numbers     |                     | 打印的时候显示行号                          |
+| -x  | --exact            |                     | 展开数字(显示精确值)                        |
+| -f  | --fragment         |                     | 仅匹配第二个或更多片段                        |
+| -   | --modprobe=command |                     | 尝试使用此命令插入模块                        |
+| -   | --set-counters     | PKTS BYTES          | 在插入/附加期间设置计数器                      |
 
 ### 示例
 
