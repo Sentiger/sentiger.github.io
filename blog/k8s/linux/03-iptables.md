@@ -66,6 +66,22 @@ Usage: iptables -[ACD] chain rule-specification [options]
 |     | --modprobe=<command> |                     | 尝试使用此命令插入模块                          |
 |     | --set-counters       | PKTS BYTES          | 在插入/附加期间设置计数器                        |
 
+### 示例
 
+**查看信息**
 
+```shell
+# 查看filter表完整信息信息
+iptables -L -t filter -nv
+
+# 查看filter表INPUT链信息
+iptables -L INPUT -t filter -nv
+
+# 查看filter表INPUT链第一行信息
+iptables -L INPUT 1 -nv
+
+# 查看filter表INPUT链第1行 rule
+iptables -S INPUT 1 -t filter 
+-A INPUT -p tcp -m tcp --dport 22 -m comment --comment "允许ssh连接" -j ACCEPT
+```
 
