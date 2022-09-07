@@ -8,6 +8,10 @@ tag:
   - iptables
 ---
 
+**参考资料**
+
+- [文档]
+
 ## 基本命令
 
 ```shell
@@ -85,3 +89,38 @@ iptables -S INPUT 1 -t filter
 -A INPUT -p tcp -m tcp --dport 22 -m comment --comment "允许ssh连接" -j ACCEPT
 ```
 
+## filter表
+
+filter表的相关操作是用来拦截数据的，外部数据能否进入协议栈IP层（INPUT）(FORWARD)，用户空间数据或者IP层数据能否被发送出去到链路层（OUTPUT）。一般当做防火墙来使用 在这个表中所以有三个链可以操作:
+- INPUT
+- FORWARD
+- OUTPUT
+
+**设置filter表中链的默认规则**
+
+```shell
+#设置链默认拒绝、放行
+iptables -P INPUT DROP
+iptables -P INPUT ACCEPT
+```
+
+**相关场景**
+
+```shell
+# 1. 放行22端口
+iptables -A INPUT  -t filter -p tcp -s 0/0 --dport 22 -m comment --comment "放行ssh连接" -j ACCEPT
+
+# 将INPUT链设置默认为DROP,这样此台服务器是不会收到攻击的（程序），因为进入不了INPUT。但是数据还是到达了链路层 ，在网络层接受的时候丢弃
+iptables -P INPUT DROP
+
+# 上面INPUT drop,所以不仅外网访问不了本机，且本机也访问不了外网，因为虽然发出去没问题，但是外网会进行响应
+# 例如想ping 172.31.0.3
+iptables -A INPUT -t filter -p icmp -s 172.31.0.3 -m comment --comment "放行ping"  -j ACCEPT
+
+# 上面虽然阻止了所有的外来请求，但是同样也访问不了外网，这样不可能每次都放行。除非特殊原因，限制只能访问哪些网站
+# 但是想主机可以访问任意外网。下面这个操作是使用conntrack模块来查找发出去的包能匹配直接放行
+iptables -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+
+```
+
+[文档]: https://linux.die.net/man/8/iptables
