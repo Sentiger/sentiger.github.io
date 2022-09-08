@@ -11,6 +11,7 @@ tag:
 **参考资料**
 
 - [文档]
+- [conntrack]
 
 ## 基本命令
 
@@ -70,6 +71,54 @@ Usage: iptables -[ACD] chain rule-specification [options]
 | -   | --modprobe=command |                     | 尝试使用此命令插入模块                        |
 | -   | --set-counters     | PKTS BYTES          | 在插入/附加期间设置计数器                      |
 
+### 匹配条件
+
+
+
+
+
+```
+通用匹配:
+    -s 匹配的数据包中源IP
+    -d 匹配的数据包中的目的IP
+    -i 匹配从指定接口进来的数据包
+    -o 匹配指定接口向外发送的数据包
+  iptables -t filter -A INPUT -s 1.2.3.4 -d 4.3.2.1 -j ACCEPT     
+  
+扩展匹配:
+  1. 隐式扩展：在使用扩展匹配时候，不指定扩展模块直接使用扩展匹配
+   TCP 扩展：
+    -p: 【协议扩展】指定数据包的协议类型 tcp,udp,icmp  
+        -p tcp --tcp-flags 列表1 列表2  #tcp标志位。 列表1指定要检查的标志位，列表2：指定在列表1中有的标志位，并且标志位为1
+        -p tcp --tcp-flags syn,fin,ack syn,fin   # 匹配syn=1,fin=1,ack=0
+    --dport: 【端口扩展】 目的端口
+    --sport: 【端口扩展】 源端口
+    
+    iptables -t filter -A INPUT -s 1.2.3.4 -p tcp --dport 22 -j ACCEPT
+   
+   ICMP扩展: -p icmp --icmp-type
+     1. 将客户端1.2.3.4发的ping放行
+      iptables -A INPUT -t filter 
+  
+  UDP扩展：
+   -p udp --dport
+    
+    
+  2. 显示扩展
+    nf_conntrack
+    作用： 可以追踪记录当前系统中每个链接的状态
+    /proc/net/nf_conntrack
+    cfstate:状态模块
+        NEW: 新的连接请求
+        ESTABLISHED: 
+        INVALID:
+        RELATED:
+        
+    
+
+```
+
+
 ### 示例
 
 **查看信息**
@@ -123,4 +172,31 @@ iptables -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
 
 ```
 
+## nat表
+
+nat表主要是用来做地址转换的。`SNAT`, `DNAT`, `LOG` 所以涉及到的链有：
+
+- PREROUTING
+- INPUT
+- OUTPUT
+- POSTROUTING
+
+
+## 扩展模块
+
+### conntrack
+
+ctstate会记录每个连接的状态
+
+![img.png](./assets/ctstate.png)
+
+```
+ipv4     2 tcp      6 118 SYN_SENT src=172.31.0.2 dst=172.31.0.45 sport=53418 dport=80 [UNREPLIED] src=172.31.0.45 dst=172.31.0.2 sport=80 dport=53418 mark=0 zone=0 use=3
+
+ipv4     2 tcp      6 300 ESTABLISHED src=122.224.68.82 dst=172.31.0.2 sport=62120 dport=22 src=172.31.0.2 dst=122.224.68.82 sport=22 dport=62120 [ASSURED] mark=0 zone=0 use=2
+```
+
+
+
 [文档]: https://linux.die.net/man/8/iptables
+[conntrack]: https://opengers.github.io/openstack/openstack-base-netfilter-framework-overview/#iptables%E7%8A%B6%E6%80%81%E5%8C%B9%E9%85%8D
