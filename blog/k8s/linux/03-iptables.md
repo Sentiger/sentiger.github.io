@@ -181,6 +181,22 @@ nat表主要是用来做地址转换的。`SNAT`, `DNAT`, `LOG` 所以涉及到�
 - OUTPUT
 - POSTROUTING
 
+网卡->防火墙->用户空间
+
+```shell
+# 1. 地址转换，访问本机的80，然后访问其他的ip。（做代理用）用到了ip_conntrack模块
+## 将访问本机的80端口，然后直接直接转发到另一个ip
+iptables -t nat -A PREROUTING -p tcp --dport 80 -j DNAT --to-destination 139.198.165.7:80
+## 然后进入了output->postrouting 此时ip是这样的 clientIP:80 -> 139.198.165.7:80
+## 因为139.198.165.7:80要回数据包，总不能直接回给client，所以这样还要做一次转换。改变原地址
+iptables -t nat -A POSTROUTING -d 120.26.148.228  -j SNAT --to-source 172.31.0.2
+## 这样代理服务器收到数据之后会直接返回给client。此时是通过/proc/net/nf_conntrack 这个文件记录的数据来的。使用的是conntrack模块
+
+## 智能的 MASQUERADE。这个是发送到网卡的时候，自动的修改源地址。好处就是如果多个网卡的时候，自动识别使用哪个出口ip。不用指定
+iptables -t nat -A POSTROUTING -d 120.26.148.228  -j SNAT MASQUERADE
+
+```
+
 
 ## 扩展模块
 
