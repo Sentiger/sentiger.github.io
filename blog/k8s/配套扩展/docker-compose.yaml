@@ -1,0 +1,14 @@
+version: '3'
+services:
+  envoy:
+   image: envoyproxy/envoy:v1.23-latest
+   container_name: envoy
+   network_mode: host
+   volumes:
+    - /root/envoy/config:/config
+   command: envoy -c /config/envoy-demo.yaml
+
+# --log-path /config/custom.log 配置日志路径
+
+     
+   
