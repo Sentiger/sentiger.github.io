@@ -13,34 +13,35 @@ static_resources:
         address: 0.0.0.0
         port_value: 10000
     listener_filters: [] # 监听器过滤器
-    filter_chains: # 过滤器链配置。 监听器过滤器的配置,比其他过滤器先起作用，主要用来配置协议嗅探等.过滤器链可配置默认过滤器链，当没有过滤器链匹配时就用默认过滤器链配置。一个独立的过滤器链由一个或多个网络层(L3/L4) 过滤器 组成
+    filterChains: # 过滤器链配置。 监听器过滤器(listener_filters)的配置,比其他过滤器先起作用，主要用来配置协议嗅探等.过滤器链可配置默认过滤器链，当没有过滤器链匹配时就用默认过滤器链配置。一个独立的过滤器链由一个或多个网络层(L3/L4) 过滤器 组成
     - filters:
-      - name: envoy.filters.network.http_connection_manager # 定义过滤器的名称
+      - name: http-proxy # 定义过滤器的名称
         typed_config:
           "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager # http协议过滤器
-          scheme_header_transformation:
-            scheme_to_overwrite: https
-          stat_prefix: ingress_http
-          route_config:
+#          scheme_header_transformation: # 协议头转换
+#            scheme_to_overwrite: https # 协议换为https
+          stat_prefix: ingress_http # 生成统计时候的前缀
+          route_config: # 路由配置
             name: local_route
-            virtual_hosts:
+            virtual_hosts:  # 配置虚拟主机
             - name: local_service
               domains: ["*"]
               routes:
               - match:
                   prefix: "/"
                 route:
-                  host_rewrite_literal: www.baidu.com
+#                  host_rewrite_literal: www.baidu.com
                   cluster: service_envoyproxy_io
           http_filters:
           - name: envoy.filters.http.router
             typed_config:
               "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
 
+
   clusters:
   - name: service_envoyproxy_io
     connect_timeout: 30s
-    type: LOGICAL_DNS
+    type: STRICT_DNS
     # Comment out the following line to test on v6 networks
     dns_lookup_family: V4_ONLY
     lb_policy: ROUND_ROBIN
@@ -52,9 +53,2712 @@ static_resources:
             address:
               socket_address:
                 address: www.baidu.com
-                port_value: 443
+                port_value: 80
+        - endpoint:
+            address:
+              socket_address:
+                address: www.qq.com
+                port_value: 80
     transport_socket:
       name: envoy.transport_sockets.tls
       typed_config:
         "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
-        sni: www.baidu.com
+#        sni: www.baidu.com
+
+
+#static_resources:
+#  listeners:
+#  - name: tcp_echo
+#    address:
+#      socket_address:
+#        protocol: TCP
+#        address: 0.0.0.0
+#        port_value: 10000
+#    filter_chains:
+#    - filters:
+#      - name: test-echo
+#        typed_config:
+#          "@type": type.googleapis.com/envoy.extensions.filters.network.echo.v3.Echo
+
+
+
+
+    address:
+      socketAddress:
+        address: 10.96.191.95
+        portValue: 15443
+    bindToPort: false
+    filterChains:
+      - filters:
+          - name: istio.stats
+            typedConfig:
+              '@type': type.googleapis.com/udpa.type.v1.TypedStruct
+              typeUrl: type.googleapis.com/envoy.extensions.filters.network.wasm.v3.Wasm
+              value:
+                config:
+                  configuration:
+                    '@type': type.googleapis.com/google.protobuf.StringValue
+                    value: |
+                      {
+                        "debug": "false",
+                        "stat_prefix": "istio"
+                      }
+                  root_id: stats_outbound
+                  vm_config:
+                    code:
+                      local:
+                        inline_string: envoy.wasm.stats
+                    runtime: envoy.wasm.runtime.null
+                    vm_id: tcp_stats_outbound
+          - name: envoy.filters.network.tcp_proxy
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+              accessLog:
+                - name: envoy.access_loggers.file
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                    logFormat:
+                      textFormatSource:
+                        inlineString: |
+                          [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% "%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_CLUSTER% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%
+                    path: /dev/stdout
+              cluster: outbound|15443||istio-ingressgateway.istio-system.svc.cluster.local
+              statPrefix: outbound|15443||istio-ingressgateway.istio-system.svc.cluster.local
+    name: 10.96.191.95_15443
+    trafficDirection: OUTBOUND
+  - accessLog:
+      - filter:
+          responseFlagFilter:
+            flags:
+              - NR
+        name: envoy.access_loggers.file
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+          logFormat:
+            textFormatSource:
+              inlineString: |
+                [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% "%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_CLUSTER% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%
+          path: /dev/stdout
+    address:
+      socketAddress:
+        address: 10.96.104.15
+        portValue: 15012
+    bindToPort: false
+    filterChains:
+      - filters:
+          - name: istio.stats
+            typedConfig:
+              '@type': type.googleapis.com/udpa.type.v1.TypedStruct
+              typeUrl: type.googleapis.com/envoy.extensions.filters.network.wasm.v3.Wasm
+              value:
+                config:
+                  configuration:
+                    '@type': type.googleapis.com/google.protobuf.StringValue
+                    value: |
+                      {
+                        "debug": "false",
+                        "stat_prefix": "istio"
+                      }
+                  root_id: stats_outbound
+                  vm_config:
+                    code:
+                      local:
+                        inline_string: envoy.wasm.stats
+                    runtime: envoy.wasm.runtime.null
+                    vm_id: tcp_stats_outbound
+          - name: envoy.filters.network.tcp_proxy
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+              accessLog:
+                - name: envoy.access_loggers.file
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                    logFormat:
+                      textFormatSource:
+                        inlineString: |
+                          [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% "%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_CLUSTER% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%
+                    path: /dev/stdout
+              cluster: outbound|15012||istiod.istio-system.svc.cluster.local
+              statPrefix: outbound|15012||istiod.istio-system.svc.cluster.local
+    name: 10.96.104.15_15012
+    trafficDirection: OUTBOUND
+  - accessLog:
+      - filter:
+          responseFlagFilter:
+            flags:
+              - NR
+        name: envoy.access_loggers.file
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+          logFormat:
+            textFormatSource:
+              inlineString: |
+                [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% "%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_CLUSTER% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%
+          path: /dev/stdout
+    address:
+      socketAddress:
+        address: 10.96.104.15
+        portValue: 443
+    bindToPort: false
+    filterChains:
+      - filters:
+          - name: istio.stats
+            typedConfig:
+              '@type': type.googleapis.com/udpa.type.v1.TypedStruct
+              typeUrl: type.googleapis.com/envoy.extensions.filters.network.wasm.v3.Wasm
+              value:
+                config:
+                  configuration:
+                    '@type': type.googleapis.com/google.protobuf.StringValue
+                    value: |
+                      {
+                        "debug": "false",
+                        "stat_prefix": "istio"
+                      }
+                  root_id: stats_outbound
+                  vm_config:
+                    code:
+                      local:
+                        inline_string: envoy.wasm.stats
+                    runtime: envoy.wasm.runtime.null
+                    vm_id: tcp_stats_outbound
+          - name: envoy.filters.network.tcp_proxy
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+              accessLog:
+                - name: envoy.access_loggers.file
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                    logFormat:
+                      textFormatSource:
+                        inlineString: |
+                          [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% "%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_CLUSTER% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%
+                    path: /dev/stdout
+              cluster: outbound|443||istiod.istio-system.svc.cluster.local
+              statPrefix: outbound|443||istiod.istio-system.svc.cluster.local
+    name: 10.96.104.15_443
+    trafficDirection: OUTBOUND
+  - accessLog:
+      - filter:
+          responseFlagFilter:
+            flags:
+              - NR
+        name: envoy.access_loggers.file
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+          logFormat:
+            textFormatSource:
+              inlineString: |
+                [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% "%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_CLUSTER% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%
+          path: /dev/stdout
+    address:
+      socketAddress:
+        address: 10.96.47.60
+        portValue: 443
+    bindToPort: false
+    filterChains:
+      - filters:
+          - name: istio.stats
+            typedConfig:
+              '@type': type.googleapis.com/udpa.type.v1.TypedStruct
+              typeUrl: type.googleapis.com/envoy.extensions.filters.network.wasm.v3.Wasm
+              value:
+                config:
+                  configuration:
+                    '@type': type.googleapis.com/google.protobuf.StringValue
+                    value: |
+                      {
+                        "debug": "false",
+                        "stat_prefix": "istio"
+                      }
+                  root_id: stats_outbound
+                  vm_config:
+                    code:
+                      local:
+                        inline_string: envoy.wasm.stats
+                    runtime: envoy.wasm.runtime.null
+                    vm_id: tcp_stats_outbound
+          - name: envoy.filters.network.tcp_proxy
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+              accessLog:
+                - name: envoy.access_loggers.file
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                    logFormat:
+                      textFormatSource:
+                        inlineString: |
+                          [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% "%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_CLUSTER% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%
+                    path: /dev/stdout
+              cluster: outbound|443||istio-egressgateway.istio-system.svc.cluster.local
+              statPrefix: outbound|443||istio-egressgateway.istio-system.svc.cluster.local
+    name: 10.96.47.60_443
+    trafficDirection: OUTBOUND
+  - accessLog:
+      - filter:
+          responseFlagFilter:
+            flags:
+              - NR
+        name: envoy.access_loggers.file
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+          logFormat:
+            textFormatSource:
+              inlineString: |
+                [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% "%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_CLUSTER% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%
+          path: /dev/stdout
+    address:
+      socketAddress:
+        address: 10.96.191.95
+        portValue: 443
+    bindToPort: false
+    filterChains:
+      - filters:
+          - name: istio.stats
+            typedConfig:
+              '@type': type.googleapis.com/udpa.type.v1.TypedStruct
+              typeUrl: type.googleapis.com/envoy.extensions.filters.network.wasm.v3.Wasm
+              value:
+                config:
+                  configuration:
+                    '@type': type.googleapis.com/google.protobuf.StringValue
+                    value: |
+                      {
+                        "debug": "false",
+                        "stat_prefix": "istio"
+                      }
+                  root_id: stats_outbound
+                  vm_config:
+                    code:
+                      local:
+                        inline_string: envoy.wasm.stats
+                    runtime: envoy.wasm.runtime.null
+                    vm_id: tcp_stats_outbound
+          - name: envoy.filters.network.tcp_proxy
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+              accessLog:
+                - name: envoy.access_loggers.file
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                    logFormat:
+                      textFormatSource:
+                        inlineString: |
+                          [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% "%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_CLUSTER% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%
+                    path: /dev/stdout
+              cluster: outbound|443||istio-ingressgateway.istio-system.svc.cluster.local
+              statPrefix: outbound|443||istio-ingressgateway.istio-system.svc.cluster.local
+    name: 10.96.191.95_443
+    trafficDirection: OUTBOUND
+  - accessLog:
+      - filter:
+          responseFlagFilter:
+            flags:
+              - NR
+        name: envoy.access_loggers.file
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+          logFormat:
+            textFormatSource:
+              inlineString: |
+                [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% "%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_CLUSTER% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%
+          path: /dev/stdout
+    address:
+      socketAddress:
+        address: 10.96.191.95
+        portValue: 31400
+    bindToPort: false
+    filterChains:
+      - filters:
+          - name: istio.stats
+            typedConfig:
+              '@type': type.googleapis.com/udpa.type.v1.TypedStruct
+              typeUrl: type.googleapis.com/envoy.extensions.filters.network.wasm.v3.Wasm
+              value:
+                config:
+                  configuration:
+                    '@type': type.googleapis.com/google.protobuf.StringValue
+                    value: |
+                      {
+                        "debug": "false",
+                        "stat_prefix": "istio"
+                      }
+                  root_id: stats_outbound
+                  vm_config:
+                    code:
+                      local:
+                        inline_string: envoy.wasm.stats
+                    runtime: envoy.wasm.runtime.null
+                    vm_id: tcp_stats_outbound
+          - name: envoy.filters.network.tcp_proxy
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+              accessLog:
+                - name: envoy.access_loggers.file
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                    logFormat:
+                      textFormatSource:
+                        inlineString: |
+                          [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% "%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_CLUSTER% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%
+                    path: /dev/stdout
+              cluster: outbound|31400||istio-ingressgateway.istio-system.svc.cluster.local
+              statPrefix: outbound|31400||istio-ingressgateway.istio-system.svc.cluster.local
+    name: 10.96.191.95_31400
+    trafficDirection: OUTBOUND
+  - accessLog:
+      - filter:
+          responseFlagFilter:
+            flags:
+              - NR
+        name: envoy.access_loggers.file
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+          logFormat:
+            textFormatSource:
+              inlineString: |
+                [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% "%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_CLUSTER% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%
+          path: /dev/stdout
+    address:
+      socketAddress:
+        address: 10.96.0.1
+        portValue: 443
+    bindToPort: false
+    filterChains:
+      - filters:
+          - name: istio.stats
+            typedConfig:
+              '@type': type.googleapis.com/udpa.type.v1.TypedStruct
+              typeUrl: type.googleapis.com/envoy.extensions.filters.network.wasm.v3.Wasm
+              value:
+                config:
+                  configuration:
+                    '@type': type.googleapis.com/google.protobuf.StringValue
+                    value: |
+                      {
+                        "debug": "false",
+                        "stat_prefix": "istio"
+                      }
+                  root_id: stats_outbound
+                  vm_config:
+                    code:
+                      local:
+                        inline_string: envoy.wasm.stats
+                    runtime: envoy.wasm.runtime.null
+                    vm_id: tcp_stats_outbound
+          - name: envoy.filters.network.tcp_proxy
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+              accessLog:
+                - name: envoy.access_loggers.file
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                    logFormat:
+                      textFormatSource:
+                        inlineString: |
+                          [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% "%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_CLUSTER% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%
+                    path: /dev/stdout
+              cluster: outbound|443||kubernetes.default.svc.cluster.local
+              statPrefix: outbound|443||kubernetes.default.svc.cluster.local
+    name: 10.96.0.1_443
+    trafficDirection: OUTBOUND
+  - accessLog:
+      - filter:
+          responseFlagFilter:
+            flags:
+              - NR
+        name: envoy.access_loggers.file
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+          logFormat:
+            textFormatSource:
+              inlineString: |
+                [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% "%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_CLUSTER% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%
+          path: /dev/stdout
+    address:
+      socketAddress:
+        address: 10.96.0.10
+        portValue: 53
+    bindToPort: false
+    filterChains:
+      - filters:
+          - name: istio.stats
+            typedConfig:
+              '@type': type.googleapis.com/udpa.type.v1.TypedStruct
+              typeUrl: type.googleapis.com/envoy.extensions.filters.network.wasm.v3.Wasm
+              value:
+                config:
+                  configuration:
+                    '@type': type.googleapis.com/google.protobuf.StringValue
+                    value: |
+                      {
+                        "debug": "false",
+                        "stat_prefix": "istio"
+                      }
+                  root_id: stats_outbound
+                  vm_config:
+                    code:
+                      local:
+                        inline_string: envoy.wasm.stats
+                    runtime: envoy.wasm.runtime.null
+                    vm_id: tcp_stats_outbound
+          - name: envoy.filters.network.tcp_proxy
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+              accessLog:
+                - name: envoy.access_loggers.file
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                    logFormat:
+                      textFormatSource:
+                        inlineString: |
+                          [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% "%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_CLUSTER% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%
+                    path: /dev/stdout
+              cluster: outbound|53||kube-dns.kube-system.svc.cluster.local
+              statPrefix: outbound|53||kube-dns.kube-system.svc.cluster.local
+    name: 10.96.0.10_53
+    trafficDirection: OUTBOUND
+  - accessLog:
+      - filter:
+          responseFlagFilter:
+            flags:
+              - NR
+        name: envoy.access_loggers.file
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+          logFormat:
+            textFormatSource:
+              inlineString: |
+                [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% "%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_CLUSTER% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%
+          path: /dev/stdout
+    address:
+      socketAddress:
+        address: 0.0.0.0
+        portValue: 80
+    bindToPort: false
+    continueOnListenerFiltersTimeout: true
+    defaultFilterChain:
+      filterChainMatch: {}
+      filters:
+        - name: istio.stats
+          typedConfig:
+            '@type': type.googleapis.com/udpa.type.v1.TypedStruct
+            typeUrl: type.googleapis.com/envoy.extensions.filters.network.wasm.v3.Wasm
+            value:
+              config:
+                configuration:
+                  '@type': type.googleapis.com/google.protobuf.StringValue
+                  value: |
+                    {
+                      "debug": "false",
+                      "stat_prefix": "istio"
+                    }
+                root_id: stats_outbound
+                vm_config:
+                  code:
+                    local:
+                      inline_string: envoy.wasm.stats
+                  runtime: envoy.wasm.runtime.null
+                  vm_id: tcp_stats_outbound
+        - name: envoy.filters.network.tcp_proxy
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+            accessLog:
+              - name: envoy.access_loggers.file
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                  logFormat:
+                    textFormatSource:
+                      inlineString: |
+                        [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% "%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_CLUSTER% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%
+                  path: /dev/stdout
+            cluster: PassthroughCluster
+            idleTimeout: 0s
+            statPrefix: PassthroughCluster
+      name: PassthroughFilterChain
+    filterChains:
+      - filterChainMatch:
+          applicationProtocols:
+            - http/1.1
+            - h2c
+          transportProtocol: raw_buffer
+        filters:
+          - name: envoy.filters.network.http_connection_manager
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+              accessLog:
+                - name: envoy.access_loggers.file
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                    logFormat:
+                      textFormatSource:
+                        inlineString: |
+                          [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% "%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_CLUSTER% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%
+                    path: /dev/stdout
+              httpFilters:
+                - name: istio.metadata_exchange
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.filters.http.wasm.v3.Wasm
+                    config:
+                      configuration:
+                        '@type': type.googleapis.com/envoy.tcp.metadataexchange.config.MetadataExchange
+                      vmConfig:
+                        code:
+                          local:
+                            inlineString: envoy.wasm.metadata_exchange
+                        runtime: envoy.wasm.runtime.null
+                - name: istio.alpn
+                  typedConfig:
+                    '@type': type.googleapis.com/istio.envoy.config.filter.http.alpn.v2alpha1.FilterConfig
+                    alpnOverride:
+                      - alpnOverride:
+                          - istio-http/1.0
+                          - istio
+                          - http/1.0
+                      - alpnOverride:
+                          - istio-http/1.1
+                          - istio
+                          - http/1.1
+                        upstreamProtocol: HTTP11
+                      - alpnOverride:
+                          - istio-h2
+                          - istio
+                          - h2
+                        upstreamProtocol: HTTP2
+                - name: envoy.filters.http.fault
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.filters.http.fault.v3.HTTPFault
+                - name: envoy.filters.http.cors
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.filters.http.cors.v3.Cors
+                - name: istio.stats
+                  typedConfig:
+                    '@type': type.googleapis.com/udpa.type.v1.TypedStruct
+                    typeUrl: type.googleapis.com/envoy.extensions.filters.http.wasm.v3.Wasm
+                    value:
+                      config:
+                        configuration:
+                          '@type': type.googleapis.com/google.protobuf.StringValue
+                          value: |
+                            {
+                              "debug": "false",
+                              "stat_prefix": "istio"
+                            }
+                        root_id: stats_outbound
+                        vm_config:
+                          code:
+                            local:
+                              inline_string: envoy.wasm.stats
+                          runtime: envoy.wasm.runtime.null
+                          vm_id: stats_outbound
+                - name: envoy.filters.http.router
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+              normalizePath: true
+              pathWithEscapedSlashesAction: KEEP_UNCHANGED
+              rds:
+                configSource:
+                  ads: {}
+                  initialFetchTimeout: 0s
+                  resourceApiVersion: V3
+                routeConfigName: "80"
+              requestIdExtension:
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.request_id.uuid.v3.UuidRequestIdConfig
+                  useRequestIdForTraceSampling: true
+              statPrefix: outbound_0.0.0.0_80
+              streamIdleTimeout: 0s
+              tracing:
+                clientSampling:
+                  value: 100
+                customTags:
+                  - metadata:
+                      kind:
+                        request: {}
+                      metadataKey:
+                        key: envoy.filters.http.rbac
+                        path:
+                          - key: istio_dry_run_allow_shadow_effective_policy_id
+                    tag: istio.authorization.dry_run.allow_policy.name
+                  - metadata:
+                      kind:
+                        request: {}
+                      metadataKey:
+                        key: envoy.filters.http.rbac
+                        path:
+                          - key: istio_dry_run_allow_shadow_engine_result
+                    tag: istio.authorization.dry_run.allow_policy.result
+                  - metadata:
+                      kind:
+                        request: {}
+                      metadataKey:
+                        key: envoy.filters.http.rbac
+                        path:
+                          - key: istio_dry_run_deny_shadow_effective_policy_id
+                    tag: istio.authorization.dry_run.deny_policy.name
+                  - metadata:
+                      kind:
+                        request: {}
+                      metadataKey:
+                        key: envoy.filters.http.rbac
+                        path:
+                          - key: istio_dry_run_deny_shadow_engine_result
+                    tag: istio.authorization.dry_run.deny_policy.result
+                  - literal:
+                      value: v1
+                    tag: istio.canonical_revision
+                  - literal:
+                      value: user
+                    tag: istio.canonical_service
+                  - literal:
+                      value: cluster.local
+                    tag: istio.mesh_id
+                  - literal:
+                      value: default
+                    tag: istio.namespace
+                overallSampling:
+                  value: 100
+                randomSampling:
+                  value: 100
+              upgradeConfigs:
+                - upgradeType: websocket
+              useRemoteAddress: false
+    listenerFilters:
+      - name: envoy.filters.listener.tls_inspector
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
+      - name: envoy.filters.listener.http_inspector
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.filters.listener.http_inspector.v3.HttpInspector
+    listenerFiltersTimeout: 0s
+    name: 0.0.0.0_80
+    trafficDirection: OUTBOUND
+  - accessLog:
+      - filter:
+          responseFlagFilter:
+            flags:
+              - NR
+        name: envoy.access_loggers.file
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+          logFormat:
+            textFormatSource:
+              inlineString: |
+                [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% "%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_CLUSTER% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%
+          path: /dev/stdout
+    address:
+      socketAddress:
+        address: 10.96.191.95
+        portValue: 15021
+    bindToPort: false
+    continueOnListenerFiltersTimeout: true
+    defaultFilterChain:
+      filters:
+        - name: istio.stats
+          typedConfig:
+            '@type': type.googleapis.com/udpa.type.v1.TypedStruct
+            typeUrl: type.googleapis.com/envoy.extensions.filters.network.wasm.v3.Wasm
+            value:
+              config:
+                configuration:
+                  '@type': type.googleapis.com/google.protobuf.StringValue
+                  value: |
+                    {
+                      "debug": "false",
+                      "stat_prefix": "istio"
+                    }
+                root_id: stats_outbound
+                vm_config:
+                  code:
+                    local:
+                      inline_string: envoy.wasm.stats
+                  runtime: envoy.wasm.runtime.null
+                  vm_id: tcp_stats_outbound
+        - name: envoy.filters.network.tcp_proxy
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+            accessLog:
+              - name: envoy.access_loggers.file
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                  logFormat:
+                    textFormatSource:
+                      inlineString: |
+                        [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% "%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_CLUSTER% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%
+                  path: /dev/stdout
+            cluster: outbound|15021||istio-ingressgateway.istio-system.svc.cluster.local
+            statPrefix: outbound|15021||istio-ingressgateway.istio-system.svc.cluster.local
+    filterChains:
+      - filterChainMatch:
+          applicationProtocols:
+            - http/1.1
+            - h2c
+          transportProtocol: raw_buffer
+        filters:
+          - name: envoy.filters.network.http_connection_manager
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+              accessLog:
+                - name: envoy.access_loggers.file
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                    logFormat:
+                      textFormatSource:
+                        inlineString: |
+                          [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% "%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_CLUSTER% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%
+                    path: /dev/stdout
+              httpFilters:
+                - name: istio.metadata_exchange
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.filters.http.wasm.v3.Wasm
+                    config:
+                      configuration:
+                        '@type': type.googleapis.com/envoy.tcp.metadataexchange.config.MetadataExchange
+                      vmConfig:
+                        code:
+                          local:
+                            inlineString: envoy.wasm.metadata_exchange
+                        runtime: envoy.wasm.runtime.null
+                - name: istio.alpn
+                  typedConfig:
+                    '@type': type.googleapis.com/istio.envoy.config.filter.http.alpn.v2alpha1.FilterConfig
+                    alpnOverride:
+                      - alpnOverride:
+                          - istio-http/1.0
+                          - istio
+                          - http/1.0
+                      - alpnOverride:
+                          - istio-http/1.1
+                          - istio
+                          - http/1.1
+                        upstreamProtocol: HTTP11
+                      - alpnOverride:
+                          - istio-h2
+                          - istio
+                          - h2
+                        upstreamProtocol: HTTP2
+                - name: envoy.filters.http.fault
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.filters.http.fault.v3.HTTPFault
+                - name: envoy.filters.http.cors
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.filters.http.cors.v3.Cors
+                - name: istio.stats
+                  typedConfig:
+                    '@type': type.googleapis.com/udpa.type.v1.TypedStruct
+                    typeUrl: type.googleapis.com/envoy.extensions.filters.http.wasm.v3.Wasm
+                    value:
+                      config:
+                        configuration:
+                          '@type': type.googleapis.com/google.protobuf.StringValue
+                          value: |
+                            {
+                              "debug": "false",
+                              "stat_prefix": "istio"
+                            }
+                        root_id: stats_outbound
+                        vm_config:
+                          code:
+                            local:
+                              inline_string: envoy.wasm.stats
+                          runtime: envoy.wasm.runtime.null
+                          vm_id: stats_outbound
+                - name: envoy.filters.http.router
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+              normalizePath: true
+              pathWithEscapedSlashesAction: KEEP_UNCHANGED
+              rds:
+                configSource:
+                  ads: {}
+                  initialFetchTimeout: 0s
+                  resourceApiVersion: V3
+                routeConfigName: istio-ingressgateway.istio-system.svc.cluster.local:15021
+              requestIdExtension:
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.request_id.uuid.v3.UuidRequestIdConfig
+                  useRequestIdForTraceSampling: true
+              statPrefix: outbound_10.96.191.95_15021
+              streamIdleTimeout: 0s
+              tracing:
+                clientSampling:
+                  value: 100
+                customTags:
+                  - metadata:
+                      kind:
+                        request: {}
+                      metadataKey:
+                        key: envoy.filters.http.rbac
+                        path:
+                          - key: istio_dry_run_allow_shadow_effective_policy_id
+                    tag: istio.authorization.dry_run.allow_policy.name
+                  - metadata:
+                      kind:
+                        request: {}
+                      metadataKey:
+                        key: envoy.filters.http.rbac
+                        path:
+                          - key: istio_dry_run_allow_shadow_engine_result
+                    tag: istio.authorization.dry_run.allow_policy.result
+                  - metadata:
+                      kind:
+                        request: {}
+                      metadataKey:
+                        key: envoy.filters.http.rbac
+                        path:
+                          - key: istio_dry_run_deny_shadow_effective_policy_id
+                    tag: istio.authorization.dry_run.deny_policy.name
+                  - metadata:
+                      kind:
+                        request: {}
+                      metadataKey:
+                        key: envoy.filters.http.rbac
+                        path:
+                          - key: istio_dry_run_deny_shadow_engine_result
+                    tag: istio.authorization.dry_run.deny_policy.result
+                  - literal:
+                      value: v1
+                    tag: istio.canonical_revision
+                  - literal:
+                      value: user
+                    tag: istio.canonical_service
+                  - literal:
+                      value: cluster.local
+                    tag: istio.mesh_id
+                  - literal:
+                      value: default
+                    tag: istio.namespace
+                overallSampling:
+                  value: 100
+                randomSampling:
+                  value: 100
+              upgradeConfigs:
+                - upgradeType: websocket
+              useRemoteAddress: false
+    listenerFilters:
+      - name: envoy.filters.listener.tls_inspector
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
+      - name: envoy.filters.listener.http_inspector
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.filters.listener.http_inspector.v3.HttpInspector
+    listenerFiltersTimeout: 0s
+    name: 10.96.191.95_15021
+    trafficDirection: OUTBOUND
+  - accessLog:
+      - filter:
+          responseFlagFilter:
+            flags:
+              - NR
+        name: envoy.access_loggers.file
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+          logFormat:
+            textFormatSource:
+              inlineString: |
+                [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% "%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_CLUSTER% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%
+          path: /dev/stdout
+    address:
+      socketAddress:
+        address: 0.0.0.0
+        portValue: 15010
+    bindToPort: false
+    continueOnListenerFiltersTimeout: true
+    defaultFilterChain:
+      filterChainMatch: {}
+      filters:
+        - name: istio.stats
+          typedConfig:
+            '@type': type.googleapis.com/udpa.type.v1.TypedStruct
+            typeUrl: type.googleapis.com/envoy.extensions.filters.network.wasm.v3.Wasm
+            value:
+              config:
+                configuration:
+                  '@type': type.googleapis.com/google.protobuf.StringValue
+                  value: |
+                    {
+                      "debug": "false",
+                      "stat_prefix": "istio"
+                    }
+                root_id: stats_outbound
+                vm_config:
+                  code:
+                    local:
+                      inline_string: envoy.wasm.stats
+                  runtime: envoy.wasm.runtime.null
+                  vm_id: tcp_stats_outbound
+        - name: envoy.filters.network.tcp_proxy
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+            accessLog:
+              - name: envoy.access_loggers.file
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                  logFormat:
+                    textFormatSource:
+                      inlineString: |
+                        [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% "%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_CLUSTER% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%
+                  path: /dev/stdout
+            cluster: PassthroughCluster
+            idleTimeout: 0s
+            statPrefix: PassthroughCluster
+      name: PassthroughFilterChain
+    filterChains:
+      - filterChainMatch:
+          applicationProtocols:
+            - http/1.1
+            - h2c
+          transportProtocol: raw_buffer
+        filters:
+          - name: envoy.filters.network.http_connection_manager
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+              accessLog:
+                - name: envoy.access_loggers.file
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                    logFormat:
+                      textFormatSource:
+                        inlineString: |
+                          [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% "%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_CLUSTER% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%
+                    path: /dev/stdout
+              httpFilters:
+                - name: istio.metadata_exchange
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.filters.http.wasm.v3.Wasm
+                    config:
+                      configuration:
+                        '@type': type.googleapis.com/envoy.tcp.metadataexchange.config.MetadataExchange
+                      vmConfig:
+                        code:
+                          local:
+                            inlineString: envoy.wasm.metadata_exchange
+                        runtime: envoy.wasm.runtime.null
+                - name: envoy.filters.http.grpc_stats
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.filters.http.grpc_stats.v3.FilterConfig
+                    emitFilterState: true
+                    statsForAllMethods: false
+                - name: istio.alpn
+                  typedConfig:
+                    '@type': type.googleapis.com/istio.envoy.config.filter.http.alpn.v2alpha1.FilterConfig
+                    alpnOverride:
+                      - alpnOverride:
+                          - istio-http/1.0
+                          - istio
+                          - http/1.0
+                      - alpnOverride:
+                          - istio-http/1.1
+                          - istio
+                          - http/1.1
+                        upstreamProtocol: HTTP11
+                      - alpnOverride:
+                          - istio-h2
+                          - istio
+                          - h2
+                        upstreamProtocol: HTTP2
+                - name: envoy.filters.http.fault
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.filters.http.fault.v3.HTTPFault
+                - name: envoy.filters.http.cors
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.filters.http.cors.v3.Cors
+                - name: istio.stats
+                  typedConfig:
+                    '@type': type.googleapis.com/udpa.type.v1.TypedStruct
+                    typeUrl: type.googleapis.com/envoy.extensions.filters.http.wasm.v3.Wasm
+                    value:
+                      config:
+                        configuration:
+                          '@type': type.googleapis.com/google.protobuf.StringValue
+                          value: |
+                            {
+                              "debug": "false",
+                              "stat_prefix": "istio"
+                            }
+                        root_id: stats_outbound
+                        vm_config:
+                          code:
+                            local:
+                              inline_string: envoy.wasm.stats
+                          runtime: envoy.wasm.runtime.null
+                          vm_id: stats_outbound
+                - name: envoy.filters.http.router
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+              normalizePath: true
+              pathWithEscapedSlashesAction: KEEP_UNCHANGED
+              rds:
+                configSource:
+                  ads: {}
+                  initialFetchTimeout: 0s
+                  resourceApiVersion: V3
+                routeConfigName: "15010"
+              requestIdExtension:
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.request_id.uuid.v3.UuidRequestIdConfig
+                  useRequestIdForTraceSampling: true
+              statPrefix: outbound_0.0.0.0_15010
+              streamIdleTimeout: 0s
+              tracing:
+                clientSampling:
+                  value: 100
+                customTags:
+                  - metadata:
+                      kind:
+                        request: {}
+                      metadataKey:
+                        key: envoy.filters.http.rbac
+                        path:
+                          - key: istio_dry_run_allow_shadow_effective_policy_id
+                    tag: istio.authorization.dry_run.allow_policy.name
+                  - metadata:
+                      kind:
+                        request: {}
+                      metadataKey:
+                        key: envoy.filters.http.rbac
+                        path:
+                          - key: istio_dry_run_allow_shadow_engine_result
+                    tag: istio.authorization.dry_run.allow_policy.result
+                  - metadata:
+                      kind:
+                        request: {}
+                      metadataKey:
+                        key: envoy.filters.http.rbac
+                        path:
+                          - key: istio_dry_run_deny_shadow_effective_policy_id
+                    tag: istio.authorization.dry_run.deny_policy.name
+                  - metadata:
+                      kind:
+                        request: {}
+                      metadataKey:
+                        key: envoy.filters.http.rbac
+                        path:
+                          - key: istio_dry_run_deny_shadow_engine_result
+                    tag: istio.authorization.dry_run.deny_policy.result
+                  - literal:
+                      value: v1
+                    tag: istio.canonical_revision
+                  - literal:
+                      value: user
+                    tag: istio.canonical_service
+                  - literal:
+                      value: cluster.local
+                    tag: istio.mesh_id
+                  - literal:
+                      value: default
+                    tag: istio.namespace
+                overallSampling:
+                  value: 100
+                randomSampling:
+                  value: 100
+              upgradeConfigs:
+                - upgradeType: websocket
+              useRemoteAddress: false
+    listenerFilters:
+      - name: envoy.filters.listener.tls_inspector
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
+      - name: envoy.filters.listener.http_inspector
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.filters.listener.http_inspector.v3.HttpInspector
+    listenerFiltersTimeout: 0s
+    name: 0.0.0.0_15010
+    trafficDirection: OUTBOUND
+  - accessLog:
+      - filter:
+          responseFlagFilter:
+            flags:
+              - NR
+        name: envoy.access_loggers.file
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+          logFormat:
+            textFormatSource:
+              inlineString: |
+                [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% "%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_CLUSTER% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%
+          path: /dev/stdout
+    address:
+      socketAddress:
+        address: 10.96.0.10
+        portValue: 9153
+    bindToPort: false
+    continueOnListenerFiltersTimeout: true
+    defaultFilterChain:
+      filters:
+        - name: istio.stats
+          typedConfig:
+            '@type': type.googleapis.com/udpa.type.v1.TypedStruct
+            typeUrl: type.googleapis.com/envoy.extensions.filters.network.wasm.v3.Wasm
+            value:
+              config:
+                configuration:
+                  '@type': type.googleapis.com/google.protobuf.StringValue
+                  value: |
+                    {
+                      "debug": "false",
+                      "stat_prefix": "istio"
+                    }
+                root_id: stats_outbound
+                vm_config:
+                  code:
+                    local:
+                      inline_string: envoy.wasm.stats
+                  runtime: envoy.wasm.runtime.null
+                  vm_id: tcp_stats_outbound
+        - name: envoy.filters.network.tcp_proxy
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+            accessLog:
+              - name: envoy.access_loggers.file
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                  logFormat:
+                    textFormatSource:
+                      inlineString: |
+                        [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% "%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_CLUSTER% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%
+                  path: /dev/stdout
+            cluster: outbound|9153||kube-dns.kube-system.svc.cluster.local
+            statPrefix: outbound|9153||kube-dns.kube-system.svc.cluster.local
+    filterChains:
+      - filterChainMatch:
+          applicationProtocols:
+            - http/1.1
+            - h2c
+          transportProtocol: raw_buffer
+        filters:
+          - name: envoy.filters.network.http_connection_manager
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+              accessLog:
+                - name: envoy.access_loggers.file
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                    logFormat:
+                      textFormatSource:
+                        inlineString: |
+                          [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% "%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_CLUSTER% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%
+                    path: /dev/stdout
+              httpFilters:
+                - name: istio.metadata_exchange
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.filters.http.wasm.v3.Wasm
+                    config:
+                      configuration:
+                        '@type': type.googleapis.com/envoy.tcp.metadataexchange.config.MetadataExchange
+                      vmConfig:
+                        code:
+                          local:
+                            inlineString: envoy.wasm.metadata_exchange
+                        runtime: envoy.wasm.runtime.null
+                - name: istio.alpn
+                  typedConfig:
+                    '@type': type.googleapis.com/istio.envoy.config.filter.http.alpn.v2alpha1.FilterConfig
+                    alpnOverride:
+                      - alpnOverride:
+                          - istio-http/1.0
+                          - istio
+                          - http/1.0
+                      - alpnOverride:
+                          - istio-http/1.1
+                          - istio
+                          - http/1.1
+                        upstreamProtocol: HTTP11
+                      - alpnOverride:
+                          - istio-h2
+                          - istio
+                          - h2
+                        upstreamProtocol: HTTP2
+                - name: envoy.filters.http.fault
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.filters.http.fault.v3.HTTPFault
+                - name: envoy.filters.http.cors
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.filters.http.cors.v3.Cors
+                - name: istio.stats
+                  typedConfig:
+                    '@type': type.googleapis.com/udpa.type.v1.TypedStruct
+                    typeUrl: type.googleapis.com/envoy.extensions.filters.http.wasm.v3.Wasm
+                    value:
+                      config:
+                        configuration:
+                          '@type': type.googleapis.com/google.protobuf.StringValue
+                          value: |
+                            {
+                              "debug": "false",
+                              "stat_prefix": "istio"
+                            }
+                        root_id: stats_outbound
+                        vm_config:
+                          code:
+                            local:
+                              inline_string: envoy.wasm.stats
+                          runtime: envoy.wasm.runtime.null
+                          vm_id: stats_outbound
+                - name: envoy.filters.http.router
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+              normalizePath: true
+              pathWithEscapedSlashesAction: KEEP_UNCHANGED
+              rds:
+                configSource:
+                  ads: {}
+                  initialFetchTimeout: 0s
+                  resourceApiVersion: V3
+                routeConfigName: kube-dns.kube-system.svc.cluster.local:9153
+              requestIdExtension:
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.request_id.uuid.v3.UuidRequestIdConfig
+                  useRequestIdForTraceSampling: true
+              statPrefix: outbound_10.96.0.10_9153
+              streamIdleTimeout: 0s
+              tracing:
+                clientSampling:
+                  value: 100
+                customTags:
+                  - metadata:
+                      kind:
+                        request: {}
+                      metadataKey:
+                        key: envoy.filters.http.rbac
+                        path:
+                          - key: istio_dry_run_allow_shadow_effective_policy_id
+                    tag: istio.authorization.dry_run.allow_policy.name
+                  - metadata:
+                      kind:
+                        request: {}
+                      metadataKey:
+                        key: envoy.filters.http.rbac
+                        path:
+                          - key: istio_dry_run_allow_shadow_engine_result
+                    tag: istio.authorization.dry_run.allow_policy.result
+                  - metadata:
+                      kind:
+                        request: {}
+                      metadataKey:
+                        key: envoy.filters.http.rbac
+                        path:
+                          - key: istio_dry_run_deny_shadow_effective_policy_id
+                    tag: istio.authorization.dry_run.deny_policy.name
+                  - metadata:
+                      kind:
+                        request: {}
+                      metadataKey:
+                        key: envoy.filters.http.rbac
+                        path:
+                          - key: istio_dry_run_deny_shadow_engine_result
+                    tag: istio.authorization.dry_run.deny_policy.result
+                  - literal:
+                      value: v1
+                    tag: istio.canonical_revision
+                  - literal:
+                      value: user
+                    tag: istio.canonical_service
+                  - literal:
+                      value: cluster.local
+                    tag: istio.mesh_id
+                  - literal:
+                      value: default
+                    tag: istio.namespace
+                overallSampling:
+                  value: 100
+                randomSampling:
+                  value: 100
+              upgradeConfigs:
+                - upgradeType: websocket
+              useRemoteAddress: false
+    listenerFilters:
+      - name: envoy.filters.listener.tls_inspector
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
+      - name: envoy.filters.listener.http_inspector
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.filters.listener.http_inspector.v3.HttpInspector
+    listenerFiltersTimeout: 0s
+    name: 10.96.0.10_9153
+    trafficDirection: OUTBOUND
+  - accessLog:
+      - filter:
+          responseFlagFilter:
+            flags:
+              - NR
+        name: envoy.access_loggers.file
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+          logFormat:
+            textFormatSource:
+              inlineString: |
+                [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% "%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_CLUSTER% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%
+          path: /dev/stdout
+    address:
+      socketAddress:
+        address: 0.0.0.0
+        portValue: 15014
+    bindToPort: false
+    continueOnListenerFiltersTimeout: true
+    defaultFilterChain:
+      filterChainMatch: {}
+      filters:
+        - name: istio.stats
+          typedConfig:
+            '@type': type.googleapis.com/udpa.type.v1.TypedStruct
+            typeUrl: type.googleapis.com/envoy.extensions.filters.network.wasm.v3.Wasm
+            value:
+              config:
+                configuration:
+                  '@type': type.googleapis.com/google.protobuf.StringValue
+                  value: |
+                    {
+                      "debug": "false",
+                      "stat_prefix": "istio"
+                    }
+                root_id: stats_outbound
+                vm_config:
+                  code:
+                    local:
+                      inline_string: envoy.wasm.stats
+                  runtime: envoy.wasm.runtime.null
+                  vm_id: tcp_stats_outbound
+        - name: envoy.filters.network.tcp_proxy
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+            accessLog:
+              - name: envoy.access_loggers.file
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                  logFormat:
+                    textFormatSource:
+                      inlineString: |
+                        [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% "%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_CLUSTER% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%
+                  path: /dev/stdout
+            cluster: PassthroughCluster
+            idleTimeout: 0s
+            statPrefix: PassthroughCluster
+      name: PassthroughFilterChain
+    filterChains:
+      - filterChainMatch:
+          applicationProtocols:
+            - http/1.1
+            - h2c
+          transportProtocol: raw_buffer
+        filters:
+          - name: envoy.filters.network.http_connection_manager
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+              accessLog:
+                - name: envoy.access_loggers.file
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                    logFormat:
+                      textFormatSource:
+                        inlineString: |
+                          [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% "%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_CLUSTER% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%
+                    path: /dev/stdout
+              httpFilters:
+                - name: istio.metadata_exchange
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.filters.http.wasm.v3.Wasm
+                    config:
+                      configuration:
+                        '@type': type.googleapis.com/envoy.tcp.metadataexchange.config.MetadataExchange
+                      vmConfig:
+                        code:
+                          local:
+                            inlineString: envoy.wasm.metadata_exchange
+                        runtime: envoy.wasm.runtime.null
+                - name: istio.alpn
+                  typedConfig:
+                    '@type': type.googleapis.com/istio.envoy.config.filter.http.alpn.v2alpha1.FilterConfig
+                    alpnOverride:
+                      - alpnOverride:
+                          - istio-http/1.0
+                          - istio
+                          - http/1.0
+                      - alpnOverride:
+                          - istio-http/1.1
+                          - istio
+                          - http/1.1
+                        upstreamProtocol: HTTP11
+                      - alpnOverride:
+                          - istio-h2
+                          - istio
+                          - h2
+                        upstreamProtocol: HTTP2
+                - name: envoy.filters.http.fault
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.filters.http.fault.v3.HTTPFault
+                - name: envoy.filters.http.cors
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.filters.http.cors.v3.Cors
+                - name: istio.stats
+                  typedConfig:
+                    '@type': type.googleapis.com/udpa.type.v1.TypedStruct
+                    typeUrl: type.googleapis.com/envoy.extensions.filters.http.wasm.v3.Wasm
+                    value:
+                      config:
+                        configuration:
+                          '@type': type.googleapis.com/google.protobuf.StringValue
+                          value: |
+                            {
+                              "debug": "false",
+                              "stat_prefix": "istio"
+                            }
+                        root_id: stats_outbound
+                        vm_config:
+                          code:
+                            local:
+                              inline_string: envoy.wasm.stats
+                          runtime: envoy.wasm.runtime.null
+                          vm_id: stats_outbound
+                - name: envoy.filters.http.router
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+              normalizePath: true
+              pathWithEscapedSlashesAction: KEEP_UNCHANGED
+              rds:
+                configSource:
+                  ads: {}
+                  initialFetchTimeout: 0s
+                  resourceApiVersion: V3
+                routeConfigName: "15014"
+              requestIdExtension:
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.request_id.uuid.v3.UuidRequestIdConfig
+                  useRequestIdForTraceSampling: true
+              statPrefix: outbound_0.0.0.0_15014
+              streamIdleTimeout: 0s
+              tracing:
+                clientSampling:
+                  value: 100
+                customTags:
+                  - metadata:
+                      kind:
+                        request: {}
+                      metadataKey:
+                        key: envoy.filters.http.rbac
+                        path:
+                          - key: istio_dry_run_allow_shadow_effective_policy_id
+                    tag: istio.authorization.dry_run.allow_policy.name
+                  - metadata:
+                      kind:
+                        request: {}
+                      metadataKey:
+                        key: envoy.filters.http.rbac
+                        path:
+                          - key: istio_dry_run_allow_shadow_engine_result
+                    tag: istio.authorization.dry_run.allow_policy.result
+                  - metadata:
+                      kind:
+                        request: {}
+                      metadataKey:
+                        key: envoy.filters.http.rbac
+                        path:
+                          - key: istio_dry_run_deny_shadow_effective_policy_id
+                    tag: istio.authorization.dry_run.deny_policy.name
+                  - metadata:
+                      kind:
+                        request: {}
+                      metadataKey:
+                        key: envoy.filters.http.rbac
+                        path:
+                          - key: istio_dry_run_deny_shadow_engine_result
+                    tag: istio.authorization.dry_run.deny_policy.result
+                  - literal:
+                      value: v1
+                    tag: istio.canonical_revision
+                  - literal:
+                      value: user
+                    tag: istio.canonical_service
+                  - literal:
+                      value: cluster.local
+                    tag: istio.mesh_id
+                  - literal:
+                      value: default
+                    tag: istio.namespace
+                overallSampling:
+                  value: 100
+                randomSampling:
+                  value: 100
+              upgradeConfigs:
+                - upgradeType: websocket
+              useRemoteAddress: false
+    listenerFilters:
+      - name: envoy.filters.listener.tls_inspector
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
+      - name: envoy.filters.listener.http_inspector
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.filters.listener.http_inspector.v3.HttpInspector
+    listenerFiltersTimeout: 0s
+    name: 0.0.0.0_15014
+    trafficDirection: OUTBOUND
+  - accessLog:
+      - filter:
+          responseFlagFilter:
+            flags:
+              - NR
+        name: envoy.access_loggers.file
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+          logFormat:
+            textFormatSource:
+              inlineString: |
+                [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% "%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_CLUSTER% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%
+          path: /dev/stdout
+    address:
+      socketAddress:
+        address: 0.0.0.0
+        portValue: 15001
+    filterChains:
+      - filterChainMatch:
+          destinationPort: 15001
+        filters:
+          - name: istio.stats
+            typedConfig:
+              '@type': type.googleapis.com/udpa.type.v1.TypedStruct
+              typeUrl: type.googleapis.com/envoy.extensions.filters.network.wasm.v3.Wasm
+              value:
+                config:
+                  configuration:
+                    '@type': type.googleapis.com/google.protobuf.StringValue
+                    value: |
+                      {
+                        "debug": "false",
+                        "stat_prefix": "istio"
+                      }
+                  root_id: stats_outbound
+                  vm_config:
+                    code:
+                      local:
+                        inline_string: envoy.wasm.stats
+                    runtime: envoy.wasm.runtime.null
+                    vm_id: tcp_stats_outbound
+          - name: envoy.filters.network.tcp_proxy
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+              cluster: BlackHoleCluster
+              statPrefix: BlackHoleCluster
+        name: virtualOutbound-blackhole
+      - filters:
+          - name: istio.stats
+            typedConfig:
+              '@type': type.googleapis.com/udpa.type.v1.TypedStruct
+              typeUrl: type.googleapis.com/envoy.extensions.filters.network.wasm.v3.Wasm
+              value:
+                config:
+                  configuration:
+                    '@type': type.googleapis.com/google.protobuf.StringValue
+                    value: |
+                      {
+                        "debug": "false",
+                        "stat_prefix": "istio"
+                      }
+                  root_id: stats_outbound
+                  vm_config:
+                    code:
+                      local:
+                        inline_string: envoy.wasm.stats
+                    runtime: envoy.wasm.runtime.null
+                    vm_id: tcp_stats_outbound
+          - name: envoy.filters.network.tcp_proxy
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+              accessLog:
+                - name: envoy.access_loggers.file
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                    logFormat:
+                      textFormatSource:
+                        inlineString: |
+                          [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% "%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_CLUSTER% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%
+                    path: /dev/stdout
+              cluster: PassthroughCluster
+              idleTimeout: 0s
+              statPrefix: PassthroughCluster
+        name: virtualOutbound-catchall-tcp
+    name: virtualOutbound
+    trafficDirection: OUTBOUND
+    useOriginalDst: true
+  - accessLog:
+      - filter:
+          responseFlagFilter:
+            flags:
+              - NR
+        name: envoy.access_loggers.file
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+          logFormat:
+            textFormatSource:
+              inlineString: |
+                [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% "%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_CLUSTER% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%
+          path: /dev/stdout
+    address:
+      socketAddress:
+        address: 0.0.0.0
+        portValue: 15006
+    continueOnListenerFiltersTimeout: true
+    filterChains:
+      - filterChainMatch:
+          destinationPort: 15006
+        filters:
+          - name: istio.metadata_exchange
+            typedConfig:
+              '@type': type.googleapis.com/envoy.tcp.metadataexchange.config.MetadataExchange
+              protocol: istio-peer-exchange
+          - name: istio.stats
+            typedConfig:
+              '@type': type.googleapis.com/udpa.type.v1.TypedStruct
+              typeUrl: type.googleapis.com/envoy.extensions.filters.network.wasm.v3.Wasm
+              value:
+                config:
+                  configuration:
+                    '@type': type.googleapis.com/google.protobuf.StringValue
+                    value: |
+                      {
+                        "debug": "false",
+                        "stat_prefix": "istio"
+                      }
+                  root_id: stats_inbound
+                  vm_config:
+                    code:
+                      local:
+                        inline_string: envoy.wasm.stats
+                    runtime: envoy.wasm.runtime.null
+                    vm_id: tcp_stats_inbound
+          - name: envoy.filters.network.tcp_proxy
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+              cluster: BlackHoleCluster
+              statPrefix: BlackHoleCluster
+        name: virtualInbound-blackhole
+      - filterChainMatch:
+          applicationProtocols:
+            - istio-http/1.0
+            - istio-http/1.1
+            - istio-h2
+          prefixRanges:
+            - addressPrefix: 0.0.0.0
+              prefixLen: 0
+          transportProtocol: tls
+        filters:
+          - name: istio.metadata_exchange
+            typedConfig:
+              '@type': type.googleapis.com/envoy.tcp.metadataexchange.config.MetadataExchange
+              protocol: istio-peer-exchange
+          - name: envoy.filters.network.http_connection_manager
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+              accessLog:
+                - name: envoy.access_loggers.file
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                    logFormat:
+                      textFormatSource:
+                        inlineString: |
+                          [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% "%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_CLUSTER% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%
+                    path: /dev/stdout
+              forwardClientCertDetails: APPEND_FORWARD
+              httpFilters:
+                - name: istio.metadata_exchange
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.filters.http.wasm.v3.Wasm
+                    config:
+                      configuration:
+                        '@type': type.googleapis.com/envoy.tcp.metadataexchange.config.MetadataExchange
+                      vmConfig:
+                        code:
+                          local:
+                            inlineString: envoy.wasm.metadata_exchange
+                        runtime: envoy.wasm.runtime.null
+                - name: envoy.filters.http.fault
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.filters.http.fault.v3.HTTPFault
+                - name: envoy.filters.http.cors
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.filters.http.cors.v3.Cors
+                - name: istio.stats
+                  typedConfig:
+                    '@type': type.googleapis.com/udpa.type.v1.TypedStruct
+                    typeUrl: type.googleapis.com/envoy.extensions.filters.http.wasm.v3.Wasm
+                    value:
+                      config:
+                        configuration:
+                          '@type': type.googleapis.com/google.protobuf.StringValue
+                          value: |
+                            {
+                              "debug": "false",
+                              "stat_prefix": "istio",
+                              "disable_host_header_fallback": true
+                            }
+                        root_id: stats_inbound
+                        vm_config:
+                          code:
+                            local:
+                              inline_string: envoy.wasm.stats
+                          runtime: envoy.wasm.runtime.null
+                          vm_id: stats_inbound
+                - name: envoy.filters.http.router
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+              normalizePath: true
+              pathWithEscapedSlashesAction: KEEP_UNCHANGED
+              requestIdExtension:
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.request_id.uuid.v3.UuidRequestIdConfig
+                  useRequestIdForTraceSampling: true
+              routeConfig:
+                name: InboundPassthroughClusterIpv4
+                validateClusters: false
+                virtualHosts:
+                  - domains:
+                      - '*'
+                    name: inbound|http|0
+                    routes:
+                      - decorator:
+                          operation: :0/*
+                        match:
+                          prefix: /
+                        name: default
+                        route:
+                          cluster: InboundPassthroughClusterIpv4
+                          maxStreamDuration:
+                            grpcTimeoutHeaderMax: 0s
+                            maxStreamDuration: 0s
+                          timeout: 0s
+              serverName: istio-envoy
+              setCurrentClientCertDetails:
+                dns: true
+                subject: true
+                uri: true
+              statPrefix: InboundPassthroughClusterIpv4
+              streamIdleTimeout: 0s
+              tracing:
+                clientSampling:
+                  value: 100
+                customTags:
+                  - metadata:
+                      kind:
+                        request: {}
+                      metadataKey:
+                        key: envoy.filters.http.rbac
+                        path:
+                          - key: istio_dry_run_allow_shadow_effective_policy_id
+                    tag: istio.authorization.dry_run.allow_policy.name
+                  - metadata:
+                      kind:
+                        request: {}
+                      metadataKey:
+                        key: envoy.filters.http.rbac
+                        path:
+                          - key: istio_dry_run_allow_shadow_engine_result
+                    tag: istio.authorization.dry_run.allow_policy.result
+                  - metadata:
+                      kind:
+                        request: {}
+                      metadataKey:
+                        key: envoy.filters.http.rbac
+                        path:
+                          - key: istio_dry_run_deny_shadow_effective_policy_id
+                    tag: istio.authorization.dry_run.deny_policy.name
+                  - metadata:
+                      kind:
+                        request: {}
+                      metadataKey:
+                        key: envoy.filters.http.rbac
+                        path:
+                          - key: istio_dry_run_deny_shadow_engine_result
+                    tag: istio.authorization.dry_run.deny_policy.result
+                  - literal:
+                      value: v1
+                    tag: istio.canonical_revision
+                  - literal:
+                      value: user
+                    tag: istio.canonical_service
+                  - literal:
+                      value: cluster.local
+                    tag: istio.mesh_id
+                  - literal:
+                      value: default
+                    tag: istio.namespace
+                overallSampling:
+                  value: 100
+                randomSampling:
+                  value: 100
+              upgradeConfigs:
+                - upgradeType: websocket
+              useRemoteAddress: false
+        name: virtualInbound-catchall-http
+        transportSocket:
+          name: envoy.transport_sockets.tls
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+            commonTlsContext:
+              alpnProtocols:
+                - h2
+                - http/1.1
+              combinedValidationContext:
+                defaultValidationContext:
+                  matchSubjectAltNames:
+                    - prefix: spiffe://cluster.local/
+                validationContextSdsSecretConfig:
+                  name: ROOTCA
+                  sdsConfig:
+                    apiConfigSource:
+                      apiType: GRPC
+                      grpcServices:
+                        - envoyGrpc:
+                            clusterName: sds-grpc
+                      setNodeOnFirstMessageOnly: true
+                      transportApiVersion: V3
+                    initialFetchTimeout: 0s
+                    resourceApiVersion: V3
+              tlsCertificateSdsSecretConfigs:
+                - name: default
+                  sdsConfig:
+                    apiConfigSource:
+                      apiType: GRPC
+                      grpcServices:
+                        - envoyGrpc:
+                            clusterName: sds-grpc
+                      setNodeOnFirstMessageOnly: true
+                      transportApiVersion: V3
+                    initialFetchTimeout: 0s
+                    resourceApiVersion: V3
+              tlsParams:
+                cipherSuites:
+                  - ECDHE-ECDSA-AES256-GCM-SHA384
+                  - ECDHE-RSA-AES256-GCM-SHA384
+                  - ECDHE-ECDSA-AES128-GCM-SHA256
+                  - ECDHE-RSA-AES128-GCM-SHA256
+                  - AES256-GCM-SHA384
+                  - AES128-GCM-SHA256
+                tlsMaximumProtocolVersion: TLSv1_3
+                tlsMinimumProtocolVersion: TLSv1_2
+            requireClientCertificate: true
+      - filterChainMatch:
+          applicationProtocols:
+            - http/1.1
+            - h2c
+          prefixRanges:
+            - addressPrefix: 0.0.0.0
+              prefixLen: 0
+          transportProtocol: raw_buffer
+        filters:
+          - name: istio.metadata_exchange
+            typedConfig:
+              '@type': type.googleapis.com/envoy.tcp.metadataexchange.config.MetadataExchange
+              protocol: istio-peer-exchange
+          - name: envoy.filters.network.http_connection_manager
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+              accessLog:
+                - name: envoy.access_loggers.file
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                    logFormat:
+                      textFormatSource:
+                        inlineString: |
+                          [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% "%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_CLUSTER% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%
+                    path: /dev/stdout
+              forwardClientCertDetails: APPEND_FORWARD
+              httpFilters:
+                - name: istio.metadata_exchange
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.filters.http.wasm.v3.Wasm
+                    config:
+                      configuration:
+                        '@type': type.googleapis.com/envoy.tcp.metadataexchange.config.MetadataExchange
+                      vmConfig:
+                        code:
+                          local:
+                            inlineString: envoy.wasm.metadata_exchange
+                        runtime: envoy.wasm.runtime.null
+                - name: envoy.filters.http.fault
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.filters.http.fault.v3.HTTPFault
+                - name: envoy.filters.http.cors
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.filters.http.cors.v3.Cors
+                - name: istio.stats
+                  typedConfig:
+                    '@type': type.googleapis.com/udpa.type.v1.TypedStruct
+                    typeUrl: type.googleapis.com/envoy.extensions.filters.http.wasm.v3.Wasm
+                    value:
+                      config:
+                        configuration:
+                          '@type': type.googleapis.com/google.protobuf.StringValue
+                          value: |
+                            {
+                              "debug": "false",
+                              "stat_prefix": "istio",
+                              "disable_host_header_fallback": true
+                            }
+                        root_id: stats_inbound
+                        vm_config:
+                          code:
+                            local:
+                              inline_string: envoy.wasm.stats
+                          runtime: envoy.wasm.runtime.null
+                          vm_id: stats_inbound
+                - name: envoy.filters.http.router
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+              normalizePath: true
+              pathWithEscapedSlashesAction: KEEP_UNCHANGED
+              requestIdExtension:
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.request_id.uuid.v3.UuidRequestIdConfig
+                  useRequestIdForTraceSampling: true
+              routeConfig:
+                name: InboundPassthroughClusterIpv4
+                validateClusters: false
+                virtualHosts:
+                  - domains:
+                      - '*'
+                    name: inbound|http|0
+                    routes:
+                      - decorator:
+                          operation: :0/*
+                        match:
+                          prefix: /
+                        name: default
+                        route:
+                          cluster: InboundPassthroughClusterIpv4
+                          maxStreamDuration:
+                            grpcTimeoutHeaderMax: 0s
+                            maxStreamDuration: 0s
+                          timeout: 0s
+              serverName: istio-envoy
+              setCurrentClientCertDetails:
+                dns: true
+                subject: true
+                uri: true
+              statPrefix: InboundPassthroughClusterIpv4
+              streamIdleTimeout: 0s
+              tracing:
+                clientSampling:
+                  value: 100
+                customTags:
+                  - metadata:
+                      kind:
+                        request: {}
+                      metadataKey:
+                        key: envoy.filters.http.rbac
+                        path:
+                          - key: istio_dry_run_allow_shadow_effective_policy_id
+                    tag: istio.authorization.dry_run.allow_policy.name
+                  - metadata:
+                      kind:
+                        request: {}
+                      metadataKey:
+                        key: envoy.filters.http.rbac
+                        path:
+                          - key: istio_dry_run_allow_shadow_engine_result
+                    tag: istio.authorization.dry_run.allow_policy.result
+                  - metadata:
+                      kind:
+                        request: {}
+                      metadataKey:
+                        key: envoy.filters.http.rbac
+                        path:
+                          - key: istio_dry_run_deny_shadow_effective_policy_id
+                    tag: istio.authorization.dry_run.deny_policy.name
+                  - metadata:
+                      kind:
+                        request: {}
+                      metadataKey:
+                        key: envoy.filters.http.rbac
+                        path:
+                          - key: istio_dry_run_deny_shadow_engine_result
+                    tag: istio.authorization.dry_run.deny_policy.result
+                  - literal:
+                      value: v1
+                    tag: istio.canonical_revision
+                  - literal:
+                      value: user
+                    tag: istio.canonical_service
+                  - literal:
+                      value: cluster.local
+                    tag: istio.mesh_id
+                  - literal:
+                      value: default
+                    tag: istio.namespace
+                overallSampling:
+                  value: 100
+                randomSampling:
+                  value: 100
+              upgradeConfigs:
+                - upgradeType: websocket
+              useRemoteAddress: false
+        name: virtualInbound-catchall-http
+      - filterChainMatch:
+          applicationProtocols:
+            - istio-peer-exchange
+            - istio
+          prefixRanges:
+            - addressPrefix: 0.0.0.0
+              prefixLen: 0
+          transportProtocol: tls
+        filters:
+          - name: istio.metadata_exchange
+            typedConfig:
+              '@type': type.googleapis.com/envoy.tcp.metadataexchange.config.MetadataExchange
+              protocol: istio-peer-exchange
+          - name: istio.stats
+            typedConfig:
+              '@type': type.googleapis.com/udpa.type.v1.TypedStruct
+              typeUrl: type.googleapis.com/envoy.extensions.filters.network.wasm.v3.Wasm
+              value:
+                config:
+                  configuration:
+                    '@type': type.googleapis.com/google.protobuf.StringValue
+                    value: |
+                      {
+                        "debug": "false",
+                        "stat_prefix": "istio"
+                      }
+                  root_id: stats_inbound
+                  vm_config:
+                    code:
+                      local:
+                        inline_string: envoy.wasm.stats
+                    runtime: envoy.wasm.runtime.null
+                    vm_id: tcp_stats_inbound
+          - name: envoy.filters.network.tcp_proxy
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+              accessLog:
+                - name: envoy.access_loggers.file
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                    logFormat:
+                      textFormatSource:
+                        inlineString: |
+                          [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% "%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_CLUSTER% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%
+                    path: /dev/stdout
+              cluster: InboundPassthroughClusterIpv4
+              statPrefix: InboundPassthroughClusterIpv4
+        name: virtualInbound
+        transportSocket:
+          name: envoy.transport_sockets.tls
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+            commonTlsContext:
+              alpnProtocols:
+                - istio-peer-exchange
+                - h2
+                - http/1.1
+              combinedValidationContext:
+                defaultValidationContext:
+                  matchSubjectAltNames:
+                    - prefix: spiffe://cluster.local/
+                validationContextSdsSecretConfig:
+                  name: ROOTCA
+                  sdsConfig:
+                    apiConfigSource:
+                      apiType: GRPC
+                      grpcServices:
+                        - envoyGrpc:
+                            clusterName: sds-grpc
+                      setNodeOnFirstMessageOnly: true
+                      transportApiVersion: V3
+                    initialFetchTimeout: 0s
+                    resourceApiVersion: V3
+              tlsCertificateSdsSecretConfigs:
+                - name: default
+                  sdsConfig:
+                    apiConfigSource:
+                      apiType: GRPC
+                      grpcServices:
+                        - envoyGrpc:
+                            clusterName: sds-grpc
+                      setNodeOnFirstMessageOnly: true
+                      transportApiVersion: V3
+                    initialFetchTimeout: 0s
+                    resourceApiVersion: V3
+              tlsParams:
+                cipherSuites:
+                  - ECDHE-ECDSA-AES256-GCM-SHA384
+                  - ECDHE-RSA-AES256-GCM-SHA384
+                  - ECDHE-ECDSA-AES128-GCM-SHA256
+                  - ECDHE-RSA-AES128-GCM-SHA256
+                  - AES256-GCM-SHA384
+                  - AES128-GCM-SHA256
+                tlsMaximumProtocolVersion: TLSv1_3
+                tlsMinimumProtocolVersion: TLSv1_2
+            requireClientCertificate: true
+      - filterChainMatch:
+          prefixRanges:
+            - addressPrefix: 0.0.0.0
+              prefixLen: 0
+          transportProtocol: raw_buffer
+        filters:
+          - name: istio.metadata_exchange
+            typedConfig:
+              '@type': type.googleapis.com/envoy.tcp.metadataexchange.config.MetadataExchange
+              protocol: istio-peer-exchange
+          - name: istio.stats
+            typedConfig:
+              '@type': type.googleapis.com/udpa.type.v1.TypedStruct
+              typeUrl: type.googleapis.com/envoy.extensions.filters.network.wasm.v3.Wasm
+              value:
+                config:
+                  configuration:
+                    '@type': type.googleapis.com/google.protobuf.StringValue
+                    value: |
+                      {
+                        "debug": "false",
+                        "stat_prefix": "istio"
+                      }
+                  root_id: stats_inbound
+                  vm_config:
+                    code:
+                      local:
+                        inline_string: envoy.wasm.stats
+                    runtime: envoy.wasm.runtime.null
+                    vm_id: tcp_stats_inbound
+          - name: envoy.filters.network.tcp_proxy
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+              accessLog:
+                - name: envoy.access_loggers.file
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                    logFormat:
+                      textFormatSource:
+                        inlineString: |
+                          [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% "%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_CLUSTER% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%
+                    path: /dev/stdout
+              cluster: InboundPassthroughClusterIpv4
+              statPrefix: InboundPassthroughClusterIpv4
+        name: virtualInbound
+      - filterChainMatch:
+          prefixRanges:
+            - addressPrefix: 0.0.0.0
+              prefixLen: 0
+          transportProtocol: tls
+        filters:
+          - name: istio.metadata_exchange
+            typedConfig:
+              '@type': type.googleapis.com/envoy.tcp.metadataexchange.config.MetadataExchange
+              protocol: istio-peer-exchange
+          - name: istio.stats
+            typedConfig:
+              '@type': type.googleapis.com/udpa.type.v1.TypedStruct
+              typeUrl: type.googleapis.com/envoy.extensions.filters.network.wasm.v3.Wasm
+              value:
+                config:
+                  configuration:
+                    '@type': type.googleapis.com/google.protobuf.StringValue
+                    value: |
+                      {
+                        "debug": "false",
+                        "stat_prefix": "istio"
+                      }
+                  root_id: stats_inbound
+                  vm_config:
+                    code:
+                      local:
+                        inline_string: envoy.wasm.stats
+                    runtime: envoy.wasm.runtime.null
+                    vm_id: tcp_stats_inbound
+          - name: envoy.filters.network.tcp_proxy
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+              accessLog:
+                - name: envoy.access_loggers.file
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                    logFormat:
+                      textFormatSource:
+                        inlineString: |
+                          [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% "%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_CLUSTER% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%
+                    path: /dev/stdout
+              cluster: InboundPassthroughClusterIpv4
+              statPrefix: InboundPassthroughClusterIpv4
+        name: virtualInbound
+      - filterChainMatch:
+          applicationProtocols:
+            - istio
+            - istio-peer-exchange
+            - istio-http/1.0
+            - istio-http/1.1
+            - istio-h2
+          destinationPort: 80
+          transportProtocol: tls
+        filters:
+          - name: istio.metadata_exchange
+            typedConfig:
+              '@type': type.googleapis.com/envoy.tcp.metadataexchange.config.MetadataExchange
+              protocol: istio-peer-exchange
+          - name: envoy.filters.network.http_connection_manager
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+              accessLog:
+                - name: envoy.access_loggers.file
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                    logFormat:
+                      textFormatSource:
+                        inlineString: |
+                          [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% "%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_CLUSTER% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%
+                    path: /dev/stdout
+              forwardClientCertDetails: APPEND_FORWARD
+              httpFilters:
+                - name: istio.metadata_exchange
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.filters.http.wasm.v3.Wasm
+                    config:
+                      configuration:
+                        '@type': type.googleapis.com/envoy.tcp.metadataexchange.config.MetadataExchange
+                      vmConfig:
+                        code:
+                          local:
+                            inlineString: envoy.wasm.metadata_exchange
+                        runtime: envoy.wasm.runtime.null
+                - name: envoy.filters.http.fault
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.filters.http.fault.v3.HTTPFault
+                - name: envoy.filters.http.cors
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.filters.http.cors.v3.Cors
+                - name: istio.stats
+                  typedConfig:
+                    '@type': type.googleapis.com/udpa.type.v1.TypedStruct
+                    typeUrl: type.googleapis.com/envoy.extensions.filters.http.wasm.v3.Wasm
+                    value:
+                      config:
+                        configuration:
+                          '@type': type.googleapis.com/google.protobuf.StringValue
+                          value: |
+                            {
+                              "debug": "false",
+                              "stat_prefix": "istio",
+                              "disable_host_header_fallback": true
+                            }
+                        root_id: stats_inbound
+                        vm_config:
+                          code:
+                            local:
+                              inline_string: envoy.wasm.stats
+                          runtime: envoy.wasm.runtime.null
+                          vm_id: stats_inbound
+                - name: envoy.filters.http.router
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+              normalizePath: true
+              pathWithEscapedSlashesAction: KEEP_UNCHANGED
+              requestIdExtension:
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.request_id.uuid.v3.UuidRequestIdConfig
+                  useRequestIdForTraceSampling: true
+              routeConfig:
+                name: inbound|80||
+                validateClusters: false
+                virtualHosts:
+                  - domains:
+                      - '*'
+                    name: inbound|http|80
+                    routes:
+                      - decorator:
+                          operation: user-svc.default.svc.cluster.local:80/*
+                        match:
+                          prefix: /
+                        name: default
+                        route:
+                          cluster: inbound|80||
+                          maxStreamDuration:
+                            grpcTimeoutHeaderMax: 0s
+                            maxStreamDuration: 0s
+                          timeout: 0s
+              serverName: istio-envoy
+              setCurrentClientCertDetails:
+                dns: true
+                subject: true
+                uri: true
+              statPrefix: inbound_0.0.0.0_80
+              streamIdleTimeout: 0s
+              tracing:
+                clientSampling:
+                  value: 100
+                customTags:
+                  - metadata:
+                      kind:
+                        request: {}
+                      metadataKey:
+                        key: envoy.filters.http.rbac
+                        path:
+                          - key: istio_dry_run_allow_shadow_effective_policy_id
+                    tag: istio.authorization.dry_run.allow_policy.name
+                  - metadata:
+                      kind:
+                        request: {}
+                      metadataKey:
+                        key: envoy.filters.http.rbac
+                        path:
+                          - key: istio_dry_run_allow_shadow_engine_result
+                    tag: istio.authorization.dry_run.allow_policy.result
+                  - metadata:
+                      kind:
+                        request: {}
+                      metadataKey:
+                        key: envoy.filters.http.rbac
+                        path:
+                          - key: istio_dry_run_deny_shadow_effective_policy_id
+                    tag: istio.authorization.dry_run.deny_policy.name
+                  - metadata:
+                      kind:
+                        request: {}
+                      metadataKey:
+                        key: envoy.filters.http.rbac
+                        path:
+                          - key: istio_dry_run_deny_shadow_engine_result
+                    tag: istio.authorization.dry_run.deny_policy.result
+                  - literal:
+                      value: v1
+                    tag: istio.canonical_revision
+                  - literal:
+                      value: user
+                    tag: istio.canonical_service
+                  - literal:
+                      value: cluster.local
+                    tag: istio.mesh_id
+                  - literal:
+                      value: default
+                    tag: istio.namespace
+                overallSampling:
+                  value: 100
+                randomSampling:
+                  value: 100
+              upgradeConfigs:
+                - upgradeType: websocket
+              useRemoteAddress: false
+        name: 0.0.0.0_80
+        transportSocket:
+          name: envoy.transport_sockets.tls
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+            commonTlsContext:
+              alpnProtocols:
+                - h2
+                - http/1.1
+              combinedValidationContext:
+                defaultValidationContext:
+                  matchSubjectAltNames:
+                    - prefix: spiffe://cluster.local/
+                validationContextSdsSecretConfig:
+                  name: ROOTCA
+                  sdsConfig:
+                    apiConfigSource:
+                      apiType: GRPC
+                      grpcServices:
+                        - envoyGrpc:
+                            clusterName: sds-grpc
+                      setNodeOnFirstMessageOnly: true
+                      transportApiVersion: V3
+                    initialFetchTimeout: 0s
+                    resourceApiVersion: V3
+              tlsCertificateSdsSecretConfigs:
+                - name: default
+                  sdsConfig:
+                    apiConfigSource:
+                      apiType: GRPC
+                      grpcServices:
+                        - envoyGrpc:
+                            clusterName: sds-grpc
+                      setNodeOnFirstMessageOnly: true
+                      transportApiVersion: V3
+                    initialFetchTimeout: 0s
+                    resourceApiVersion: V3
+              tlsParams:
+                cipherSuites:
+                  - ECDHE-ECDSA-AES256-GCM-SHA384
+                  - ECDHE-RSA-AES256-GCM-SHA384
+                  - ECDHE-ECDSA-AES128-GCM-SHA256
+                  - ECDHE-RSA-AES128-GCM-SHA256
+                  - AES256-GCM-SHA384
+                  - AES128-GCM-SHA256
+                tlsMaximumProtocolVersion: TLSv1_3
+                tlsMinimumProtocolVersion: TLSv1_2
+            requireClientCertificate: true
+      - filterChainMatch:
+          destinationPort: 80
+          transportProtocol: raw_buffer
+        filters:
+          - name: istio.metadata_exchange
+            typedConfig:
+              '@type': type.googleapis.com/envoy.tcp.metadataexchange.config.MetadataExchange
+              protocol: istio-peer-exchange
+          - name: envoy.filters.network.http_connection_manager
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+              accessLog:
+                - name: envoy.access_loggers.file
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                    logFormat:
+                      textFormatSource:
+                        inlineString: |
+                          [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% "%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_CLUSTER% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%
+                    path: /dev/stdout
+              forwardClientCertDetails: APPEND_FORWARD
+              httpFilters:
+                - name: istio.metadata_exchange
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.filters.http.wasm.v3.Wasm
+                    config:
+                      configuration:
+                        '@type': type.googleapis.com/envoy.tcp.metadataexchange.config.MetadataExchange
+                      vmConfig:
+                        code:
+                          local:
+                            inlineString: envoy.wasm.metadata_exchange
+                        runtime: envoy.wasm.runtime.null
+                - name: envoy.filters.http.fault
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.filters.http.fault.v3.HTTPFault
+                - name: envoy.filters.http.cors
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.filters.http.cors.v3.Cors
+                - name: istio.stats
+                  typedConfig:
+                    '@type': type.googleapis.com/udpa.type.v1.TypedStruct
+                    typeUrl: type.googleapis.com/envoy.extensions.filters.http.wasm.v3.Wasm
+                    value:
+                      config:
+                        configuration:
+                          '@type': type.googleapis.com/google.protobuf.StringValue
+                          value: |
+                            {
+                              "debug": "false",
+                              "stat_prefix": "istio",
+                              "disable_host_header_fallback": true
+                            }
+                        root_id: stats_inbound
+                        vm_config:
+                          code:
+                            local:
+                              inline_string: envoy.wasm.stats
+                          runtime: envoy.wasm.runtime.null
+                          vm_id: stats_inbound
+                - name: envoy.filters.http.router
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+              normalizePath: true
+              pathWithEscapedSlashesAction: KEEP_UNCHANGED
+              requestIdExtension:
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.request_id.uuid.v3.UuidRequestIdConfig
+                  useRequestIdForTraceSampling: true
+              routeConfig:
+                name: inbound|80||
+                validateClusters: false
+                virtualHosts:
+                  - domains:
+                      - '*'
+                    name: inbound|http|80
+                    routes:
+                      - decorator:
+                          operation: user-svc.default.svc.cluster.local:80/*
+                        match:
+                          prefix: /
+                        name: default
+                        route:
+                          cluster: inbound|80||
+                          maxStreamDuration:
+                            grpcTimeoutHeaderMax: 0s
+                            maxStreamDuration: 0s
+                          timeout: 0s
+              serverName: istio-envoy
+              setCurrentClientCertDetails:
+                dns: true
+                subject: true
+                uri: true
+              statPrefix: inbound_0.0.0.0_80
+              streamIdleTimeout: 0s
+              tracing:
+                clientSampling:
+                  value: 100
+                customTags:
+                  - metadata:
+                      kind:
+                        request: {}
+                      metadataKey:
+                        key: envoy.filters.http.rbac
+                        path:
+                          - key: istio_dry_run_allow_shadow_effective_policy_id
+                    tag: istio.authorization.dry_run.allow_policy.name
+                  - metadata:
+                      kind:
+                        request: {}
+                      metadataKey:
+                        key: envoy.filters.http.rbac
+                        path:
+                          - key: istio_dry_run_allow_shadow_engine_result
+                    tag: istio.authorization.dry_run.allow_policy.result
+                  - metadata:
+                      kind:
+                        request: {}
+                      metadataKey:
+                        key: envoy.filters.http.rbac
+                        path:
+                          - key: istio_dry_run_deny_shadow_effective_policy_id
+                    tag: istio.authorization.dry_run.deny_policy.name
+                  - metadata:
+                      kind:
+                        request: {}
+                      metadataKey:
+                        key: envoy.filters.http.rbac
+                        path:
+                          - key: istio_dry_run_deny_shadow_engine_result
+                    tag: istio.authorization.dry_run.deny_policy.result
+                  - literal:
+                      value: v1
+                    tag: istio.canonical_revision
+                  - literal:
+                      value: user
+                    tag: istio.canonical_service
+                  - literal:
+                      value: cluster.local
+                    tag: istio.mesh_id
+                  - literal:
+                      value: default
+                    tag: istio.namespace
+                overallSampling:
+                  value: 100
+                randomSampling:
+                  value: 100
+              upgradeConfigs:
+                - upgradeType: websocket
+              useRemoteAddress: false
+        name: 0.0.0.0_80
+    listenerFilters:
+      - name: envoy.filters.listener.original_dst
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.filters.listener.original_dst.v3.OriginalDst
+      - filterDisabled:
+          destinationPortRange:
+            end: 15007
+            start: 15006
+        name: envoy.filters.listener.tls_inspector
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
+      - filterDisabled:
+          orMatch:
+            rules:
+              - destinationPortRange:
+                  end: 81
+                  start: 80
+              - destinationPortRange:
+                  end: 15007
+                  start: 15006
+        name: envoy.filters.listener.http_inspector
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.filters.listener.http_inspector.v3.HttpInspector
+    listenerFiltersTimeout: 0s
+    name: virtualInbound
+    trafficDirection: INBOUND
+  - accessLog:
+      - filter:
+          responseFlagFilter:
+            flags:
+              - NR
+        name: envoy.access_loggers.file
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+          logFormat:
+            textFormatSource:
+              inlineString: |
+                [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% "%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_CLUSTER% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%
+          path: /dev/stdout
+    address:
+      socketAddress:
+        address: 10.96.29.107
+        portValue: 443
+    bindToPort: false
+    filterChains:
+      - filters:
+          - name: istio.stats
+            typedConfig:
+              '@type': type.googleapis.com/udpa.type.v1.TypedStruct
+              typeUrl: type.googleapis.com/envoy.extensions.filters.network.wasm.v3.Wasm
+              value:
+                config:
+                  configuration:
+                    '@type': type.googleapis.com/google.protobuf.StringValue
+                    value: |
+                      {
+                        "debug": "false",
+                        "stat_prefix": "istio"
+                      }
+                  root_id: stats_outbound
+                  vm_config:
+                    code:
+                      local:
+                        inline_string: envoy.wasm.stats
+                    runtime: envoy.wasm.runtime.null
+                    vm_id: tcp_stats_outbound
+          - name: envoy.filters.network.tcp_proxy
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+              accessLog:
+                - name: envoy.access_loggers.file
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                    logFormat:
+                      textFormatSource:
+                        inlineString: |
+                          [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% "%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_CLUSTER% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%
+                    path: /dev/stdout
+              cluster: outbound|443||cattle-cluster-agent.cattle-system.svc.cluster.local
+              statPrefix: outbound|443||cattle-cluster-agent.cattle-system.svc.cluster.local
+    name: 10.96.29.107_443
+    trafficDirection: OUTBOUND
+  - address:
+      socketAddress:
+        address: 0.0.0.0
+        portValue: 15090
+    filterChains:
+      - filters:
+          - name: envoy.filters.network.http_connection_manager
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+              httpFilters:
+                - name: envoy.filters.http.router
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+              routeConfig:
+                virtualHosts:
+                  - domains:
+                      - '*'
+                    name: backend
+                    routes:
+                      - match:
+                          prefix: /stats/prometheus
+                        route:
+                          cluster: prometheus_stats
+              statPrefix: stats
+  - address:
+      socketAddress:
+        address: 0.0.0.0
+        portValue: 15021
+    filterChains:
+      - filters:
+          - name: envoy.filters.network.http_connection_manager
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+              httpFilters:
+                - name: envoy.filters.http.router
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+              routeConfig:
+                virtualHosts:
+                  - domains:
+                      - '*'
+                    name: backend
+                    routes:
+                      - match:
+                          prefix: /healthz/ready
+                        route:
+                          cluster: agent
+              statPrefix: agent

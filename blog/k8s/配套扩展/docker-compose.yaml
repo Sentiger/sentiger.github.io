@@ -6,7 +6,7 @@ services:
    network_mode: host
    volumes:
     - /root/envoy/config:/config
-   command: envoy -c /config/envoy-demo.yaml
+   command: envoy -c /config/envoy-demo.yaml -l trace
 
 # --log-path /config/custom.log 配置日志路径
 
