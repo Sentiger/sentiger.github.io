@@ -121,6 +121,131 @@ Date:   Sun Sep 18 17:17:30 2022 +0800
 上面演示了从本地工作目录写入文件，到生成git中的内容，然后生成目录树，然后生成提交着信息，最后关联到git分支整个流程
 
 
+## 分支
 
+所谓的分支记录的是当前提交的位置，然后从这个位置开始开发。分支名称dev其实就是等于`refs/heads/dev`,后面所有操作分支名的时候，都可以写完整路径
+
+**HEAD**
+
+这是一个特殊的文件，记录当前镜像位置
+
+```git
+➜  .git git:(master) cat HEAD            
+ref: refs/heads/master  # ref关联引用的是refs/heades/master分支
+
+# 修改HEAD
+1. 可以手动修改，里面的内容然后设置当前处哪个分支/tag，版本中
+2. 通过命令：git checkout ,git reset 等
+
+```
+
+**1. 查看分支内容**
+
+```git
+# 通过第一步HEAD里的内容，可以找出当前的处于git仓库中的位置
+
+# 查看分支(本地分支）
+1. git branch
+2. ls .git/refs/heades/
+
+```
+
+**2. 相关命令**
+
+```git
+# 查看本地分支
+git branch
+
+# 查看远程分支
+git branch -r
+
+# 查看所有分支
+git branch -a
+
+# 从远程分支拉到本地新分支
+git branch 新本地分支 远程分支
+
+# 通过当前分支创建一个新分支
+git branch 新分支
+
+# 切换分支（上面git branch创建分支切换分支都需要手动)
+git checkout 分支名称
+
+# 新建分支并自动切换
+git checkout -b 新分支名称 [远程分支/本地分支]
+
+# 推送本地新分支到远程（需要设置远程分支名称）
+git push --set-upstream origin dev_loca
+
+# 修改分支名（其实就是从老分支创建了个新的分支）
+git branch -m 新分支名 分支
+
+# 删除分支
+git branch -d 分支名称
+
+# 删除远程分支
+git push -d origin/仓库 远程分支名
+* 因为一个git仓库可以关联多个远程仓库，默认第一个使用的是origin，这个都可以从配置文件中查看到
+
+# 合并分支
+git merge 分支名   #将指定分支合并到当前分支
+
+# 合并指定的commit到当前分支
+git cherry-pick [commit]
+
+```
+
+## tag
+
+tag其实和分支没有太大区别，都是`refs/heads/tags`中创建
+
+
+## 撤销
+
+```git
+# 撤销其实就是回滚，回滚到某次提交的镜像
+
+# 将暂存区回滚到指定的commit，但是工作区内容不变
+$ git reset [commit]
+
+# 将暂存区某个文件回滚到指定commit
+$ git reset [commit] filename
+
+# 将工作区内容还原成暂存区内容
+$ git checkout .
+
+# 直接将工作区内容还原成某个commit
+$ git checkout [commit] .
+
+# HEAD意义
+# HEAD其实是一个指针，.git/HEAD中记录当前分支最新的commit，这个会自动变化
+# HEAD^   HEAD^^  HEAD~n 这种快捷方式上一步，上n步骤
+```
+
+
+## 远程操作
+
+```
+# 查看远程分支
+$ git remote -v
+
+# 将本地分支关联远程分支，也可以修改本地.git/config配置文件
+$ git remote add [shotname] url
+```
+
+## 日志
+
+```git
+# 建议使用工具查看，因为变化内容比较清楚
+
+# 查看当前分支提交日志
+$ git log
+
+# 查看本地最近的commit，即使是当前分支被回滚
+$ git reflog
+
+# 改变
+git diff
+```
 
 
