@@ -244,3 +244,94 @@ curl user-app-svc
 针对上面的应用，包括k8s中的任何配置都没任何改变，仅仅是加了一步将应用加入到了`service mesh`，这个操作完全对开发是无感的。对于k8s的原来操作也基本没改变。
 
 其实软件开发，都是这样，一层不能实现功能，然后在现有的基础上再次抽象出一层来改变。
+
+### 配置网关允许网格外访问
+
+针对于网格外的流量如何进入呢？使用ingress，这个时候也需要将ingress中注入到网格内部。istio提供了我们一种方式，使用gateway的方式将外部流量注入到网格内部。
+
+gateway默认安装的时候如果选择了，会在`istio-system`中会启动服务，会暴力端口nodeport 31221，或者loadbalace。
+
+::: code-tabs#language
+
+@tab 网关定义
+
+```yaml
+# user-app-gateway.yaml
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: user-app-gateway
+
+spec:
+  selector:
+    app: istio-ingressgateway # 选择一个网关服务，kubectl -n istio-system get pods --show-labels  来查看ingress-gateway 
+
+  servers:
+  - hosts:  # 外部进来的域名
+    - user-app.com
+    port:
+      number: 80
+      name: http
+      protocol: HTTP
+```
+
+@tab 定义网关后面进入的virtualService
+
+```yaml
+# user-app-gateway-virtualservice.yaml
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: user-app-gateway-virtualservice
+spec:
+  hosts: # 进入virtualservice域名
+  - user-app.com
+  gateways: # 允许哪些网关，其他的定义和内部virtualservice一样
+    - user-app-gateway
+  http: #
+  - name: user-app-svc-route
+    route:
+    - destination:
+        host: user-app-svc
+        subset: v1
+      weight: 90
+    - destination:
+        host: user-app-svc
+        subset: v2
+      weight: 10
+```
+
+:::
+
+**测试**
+
+一般正式操作都是会配合loadBalance来使用的，我们暂时使用网关暴露出来的nodePort`31221`访问
+
+```shell
+[root@web1 demo]# curl -i -H "Host: user-app.com" 172.31.0.3:31221
+HTTP/1.1 200 OK
+server: istio-envoy
+date: Mon, 19 Sep 2022 07:08:17 GMT
+content-type: text/html
+content-length: 20
+last-modified: Mon, 19 Sep 2022 03:47:33 GMT
+etag: "6327e655-14"
+accept-ranges: bytes
+x-envoy-upstream-service-time: 0
+
+user service for v1
+
+
+[root@web1 demo]#  curl -i -H "Host: user-app.com" 139.198.165.7:31221
+HTTP/1.1 200 OK
+server: istio-envoy
+date: Mon, 19 Sep 2022 07:08:42 GMT
+content-type: text/html
+content-length: 20
+last-modified: Mon, 19 Sep 2022 03:47:42 GMT
+etag: "6327e65e-14"
+accept-ranges: bytes
+x-envoy-upstream-service-time: 0
+
+user service for v2
+```
