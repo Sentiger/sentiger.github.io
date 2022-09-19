@@ -335,3 +335,91 @@ x-envoy-upstream-service-time: 0
 
 user service for v2
 ```
+
+### 重写URI
+
+istio也支持URI重写，参考下面这个demo
+
+```yaml
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: user-app-gateway-virtualservice
+spec:
+  hosts:
+    - user-app.com
+  gateways:
+    - user-app-gateway
+  http:
+    - name: user-app-svc-route-v1
+      match:
+        - uri:
+            prefix: "/v1"
+      rewrite:
+        uri: "/"
+      route:
+        - destination:
+            host: user-app-svc
+            subset: v1
+    - name: user-app-svc-route-v2
+      match:
+        - uri:
+            prefix: "/v2"
+      rewrite:
+        uri: "/"
+      route:
+        - destination:
+            host: user-app-svc
+            subset: v2
+    - name: user-app-svc-route-default
+      route:
+        - destination:
+            host: user-app-svc
+            subset: v1
+```
+
+**测试**
+
+```shell
+# 访问v1版本
+[root@web1 demo]# curl -i -H "Host: user-app.com" 172.31.0.3:31221/v1
+HTTP/1.1 200 OK
+server: istio-envoy
+date: Mon, 19 Sep 2022 07:42:17 GMT
+content-type: text/html
+content-length: 20
+last-modified: Mon, 19 Sep 2022 03:47:33 GMT
+etag: "6327e655-14"
+accept-ranges: bytes
+x-envoy-upstream-service-time: 1
+
+user service for v1
+
+# 访问v2版本
+[root@web1 demo]# curl -i -H "Host: user-app.com" 172.31.0.3:31221/v2
+HTTP/1.1 200 OK
+server: istio-envoy
+date: Mon, 19 Sep 2022 07:42:44 GMT
+content-type: text/html
+content-length: 20
+last-modified: Mon, 19 Sep 2022 03:47:42 GMT
+etag: "6327e65e-14"
+accept-ranges: bytes
+x-envoy-upstream-service-time: 0
+
+user service for v2
+
+# 默认
+[root@web1 demo]# curl -i -H "Host: user-app.com" 172.31.0.3:31221
+HTTP/1.1 200 OK
+server: istio-envoy
+date: Mon, 19 Sep 2022 07:42:56 GMT
+content-type: text/html
+content-length: 20
+last-modified: Mon, 19 Sep 2022 03:47:33 GMT
+etag: "6327e655-14"
+accept-ranges: bytes
+x-envoy-upstream-service-time: 0
+
+user service for v1
+```
