@@ -69,3 +69,178 @@ iptables规则都是通过init容器进行管理的
 出口流量过滤掉本地或者uid是1337发出的，都进行给到15001处理
 
 
+## demo1
+
+构建一个普通的service应用
+
+![img.png](./assets/user-app.png)
+
+**简单yaml**
+
+::: code-tabs#language
+
+@tab user-app-v1-deploy.yaml
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-app-v1
+  labels:
+    app: user-app
+    version: v1
+  annotations:
+    kubernetes.io/change-cause: "用户服务v1版本"
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-app
+      version: v1
+  template:
+    metadata:
+      name: user-app-v1
+      labels:
+        app: user-app
+        version: v1
+    spec:
+      containers:
+      - name: user-app-v1
+        image: nginx:1.18-alpine
+        command: ["sh", "-c", "echo 'user service for v1' > /usr/share/nginx/html/index.html; nginx -g 'daemon off;'"]
+```
+
+
+@tab user-app-v2-deploy.yaml
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-app-v2
+  labels:
+    app: user-app
+    verison: v2
+  annotations:
+    kubernetes.io/change-cause: "用户服务v2版本"
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-app
+      version: v2
+  template:
+    metadata:
+      name: user-app-v2
+      labels:
+        app: user-app
+        version: v2
+    spec:
+      containers:
+        - name: user-app-v2
+          image: nginx:1.18-alpine
+          command: ["sh", "-c", "echo 'user service for v2' > /usr/share/nginx/html/index.html; nginx -g 'daemon off;'"]
+```
+
+@tab user-app-svc.yaml
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-app-svc
+  labels:
+    app: user-app-svc
+
+spec:
+  selector:
+    app: user-app
+  ports:
+  - name: http
+    protocol: TCP
+    port: 80
+    targetPort: 80
+```
+
+:::
+
+**手动注入istion**
+
+由于istio是无侵入式的，对于应用来说并没有改变任何地方，仅仅是发布的时候不同。将user-app应用加入到网格服务
+
+```shell
+istioctl kube-inject -f user-app-v1-deploy.yaml |kubectl apply -f -
+istioctl kube-inject -f user-app-v2-deploy.yaml |kubectl apply -f -
+```
+
+
+### 配置权重的负载均衡
+
+k8s 自带的service只能支持pod之间的负载均衡，一般一个service针对的是相同后端提供服务发现。而针对于像不同版本的应用，在部署的时候会存在以下问题：
+1. 同一个应用的service name肯定不能变化，假设发布了一个v2版本的user，肯定还是使用之前的service name提供服务，要不然别的调用服务都要更改
+2. 由于第一点的问题，所以只能定义相同的selector选择后端的pod，所以这里就没法区分不同版本应用
+3. istio正好就解决了这个问题
+
+::: code-tabs#language
+
+@tab user-app-destinationrule.yaml
+
+```yaml
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: user-app-destinationrule
+
+spec:
+  host: user-app-svc # 选择要区分的service name
+  subsets: # 定义不同的节点
+  - name: v1  
+    labels:
+      version: v1 # 从相同的service name中又过滤一遍其中的version:v1的pod
+  - name: v2
+    labels:
+      version: v2
+```
+
+@tab user-app-virtualservice.yaml
+
+```yaml
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: user-app-virtualservice
+spec:
+  hosts:  # 这里是从哪些service name进来的流量
+  - user-app-svc 
+  http: # 提供的http服务
+  - name: user-app-svc-route
+    route: 
+    - destination: # 这里定义的是后端destinationrule
+        host: user-app-svc
+        subset: v1
+      weight: 90 # 90%权重到达这个destination
+    - destination:
+        host: user-app-svc
+        subset: v2
+      weight: 10
+```
+
+:::
+
+**测试**
+
+```shell
+# 进入其中一个应用容器
+kubectl exec -it user-app-v2-6c57679bfc-2zdgp -c user-app-v2 -- sh
+
+# 测试
+curl user-app-svc
+```
+
+**总结**
+
+针对上面的应用，包括k8s中的任何配置都没任何改变，仅仅是加了一步将应用加入到了`service mesh`，这个操作完全对开发是无感的。对于k8s的原来操作也基本没改变。
+
+其实软件开发，都是这样，一层不能实现功能，然后在现有的基础上再次抽象出一层来改变。
