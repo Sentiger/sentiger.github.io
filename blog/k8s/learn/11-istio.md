@@ -270,7 +270,7 @@ spec:
   - hosts:  # 外部进来的域名
     - user-app.com
     port:
-      number: 80
+      number: 80 # 这个端口是gateway服务的端口 kubectl -n istio-system get svc
       name: http
       protocol: HTTP
 ```
