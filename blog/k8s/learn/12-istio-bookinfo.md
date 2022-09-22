@@ -264,3 +264,41 @@ kubectl apply -f virtualservice.yaml
 ```
 
 :::
+
+## 发布测试版本
+
+现在发布了v2的测试版本，想先让内部用户测试下。例如通过header配置登陆用户为qiqi的使用v2版本
+
+::: code-tabs#language
+
+@tab v2虚拟服务
+
+```yaml
+# virtualservice-reviews-test-v2.yaml
+
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: reviews
+  namespace: bookinfo
+
+spec:
+  hosts:
+  - reviews
+  http:  # 路由匹配都是从前往后匹配的
+  - match:
+    - headers:
+        end-user:
+          exact: qiqi  # 匹配到end-user为qiqi的时候，就直接使用这个路由，否则使用默认的
+    route:
+    - destination:
+        host: reviews
+        subset: v2
+
+  - route:
+    - destination:
+        host: reviews
+        subset: v1
+```
+
+:::
