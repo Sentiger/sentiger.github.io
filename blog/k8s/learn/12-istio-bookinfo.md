@@ -302,3 +302,125 @@ spec:
 ```
 
 :::
+
+
+## 故障注入
+
+### 延时注入
+
+![img.png](./assets/ratings-delay.png)
+
+::: code-tabs#language
+
+@tab 延时注入
+
+```
+有时候需要进行线上服务的稳定性测试，然而在各个服务之间想模拟一下超时或者请求失败，总不能在代码中写bug吧。iostio给提供了很好的故障注入
+
+1. productpage->reviews 服务间调用程序设置的超时时间是3秒，但是有一个重试机制。
+2. 现在reviews服务又调用了ratings服务（他们之间程序设置超时时间10秒），现在直接设置ratings服务延迟7秒
+3. productpage调用reviews，则会三秒超时之后又重新发起请求，总共6秒。
+4. 所以productpage调用reviews服务6秒后自动超时
+5. 结合match，该错误只针对qiq有效
+
+```
+
+@tab yaml
+
+```yaml
+# virtualservice-ratings-test-delay.yaml
+
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: ratings
+  namespace: bookinfo
+spec:
+  hosts:
+  - ratings 
+  http:
+  - fault:
+      delay:
+        fixedDelay: 7s
+        percentage:
+          value: 100
+    match:
+    - headers:
+        end-user:
+          exact: qiqi
+    route:
+    - destination:
+        host: ratings
+        subset: v1
+  - route:
+    - destination:
+        host: ratings
+        subset: v1
+```
+
+@tab 解决方法
+
+```
+增加 productpage 与 reviews 服务之间的超时或降低 reviews 与 ratings 的超时
+终止并重启修复后的微服务
+确认 /productpage 页面正常响应且没有任何错误
+```
+
+:::
+
+
+###  HTTP abort 注入
+
+```yaml
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: ratings
+  namespace: bookinfo
+spec:
+  hosts:
+  - ratings
+  http:
+  - match:
+    - headers:
+        end-user:
+          exact: qiqi
+    route:
+    - destination:
+        host: ratings
+        subset: v1
+    fault:
+      abort:
+        httpStatus: 500
+        percentage:
+          value: 100
+  - route:
+    - destination:
+        host: ratings
+        subset: v1
+```
+
+## 流量转移
+
+在发布的时候，希望从老版本逐渐向新版本中迁移，可以按照流量百分比来做处理。然后观察服务稳定性，可以慢慢迁移到最新版本
+
+```yaml
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: reviews
+  namespace: bookinfo
+spec:
+  hosts:
+  - reviews
+  http:
+  - route:
+    - destination:
+        host: reviews
+        subset: v3
+      weight: 50
+    - destination:
+        host: reviews
+        subset: v1
+      weight: 50
+```
