@@ -215,4 +215,5 @@ ipv4     2 tcp      6 300 ESTABLISHED src=122.224.68.82 dst=172.31.0.2 sport=621
 
 
 [文档]: https://linux.die.net/man/8/iptables
+[conntrack]: https://blog.csdn.net/dhRainer/article/details/84846417
 [conntrack]: https://opengers.github.io/openstack/openstack-base-netfilter-framework-overview/#iptables%E7%8A%B6%E6%80%81%E5%8C%B9%E9%85%8D
