@@ -1,5 +1,5 @@
 ---
-title: iptables
+title: ipvs
 order: 3
 category:
   - linux
