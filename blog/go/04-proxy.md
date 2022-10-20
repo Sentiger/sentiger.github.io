@@ -1,9 +1,10 @@
 ---
 title: 代理理解
 date: 2022-09-15
-order: 31
+order: 04
 category:
   - k8s
+  - go
 ---
 
 在了解k8s中发现有各种代理，k8s自身的kube-proxy，还有nginx-ingress，envoy等各种代理。代理又分为正向代理和反向代理。下面来理解下这两方面。
