@@ -1,5 +1,5 @@
 ---
-title: iptables-总结
+title: iptables-案例
 order: 3
 category:
   - linux
@@ -70,6 +70,63 @@ iptables -t nat -A POSTROUTING -p tcp --destination 47.97.173.91 --dport 80 -j M
 ```
 
 ![img.png](./assets/forward-ip.png)
+
+
+### 内网主机通信
+
+现在买了一台青云主机（配置了外网IP）A `172.31.0.2`，和一台没有公网的内网主机 B`172.31.0.4`，现在想实现B也可以进行外网访问
+
+其实可以添加路由规则，让B中的默认网关是A机器就行。这样就能省去一个外网IP的费用了。
+
+```shell
+# B主机内添加路由
+ip route add default via 172.31.0.3
+
+# A主机添加nat转换，并且开启forward
+echo 1 > /proc/sys/net/ipv4/ip_forward
+iptables -t filter -P FORWARD ACCEPT
+
+iptables -t nat -A POSTROUTING -s 172.31.0.4 -j MASQUERADE
+
+```
+
+**测试**
+
+```
+# 内网主机B
+[root@i-2hmqlu8t ~]# ip a
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host 
+       valid_lft forever preferred_lft forever
+2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+    link/ether 52:54:99:c3:ce:af brd ff:ff:ff:ff:ff:ff
+    inet 172.31.0.4/24 brd 172.31.0.255 scope global noprefixroute dynamic eth0
+       valid_lft 83388sec preferred_lft 83388sec
+    inet6 fe80::5054:99ff:fec3:ceaf/64 scope link 
+       valid_lft forever preferred_lft forever
+       
+＃ 可以访问外网了
+[root@i-2hmqlu8t ~]# curl -i baidu.com
+HTTP/1.1 200 OK
+Date: Mon, 05 Sep 2022 14:54:46 GMT
+Server: Apache
+Last-Modified: Tue, 12 Jan 2010 13:48:00 GMT
+ETag: "51-47cf7e6ee8400"
+Accept-Ranges: bytes
+Content-Length: 81
+Cache-Control: max-age=86400
+Expires: Tue, 06 Sep 2022 14:54:46 GMT
+Connection: Keep-Alive
+Content-Type: text/html
+
+<html>
+<meta http-equiv="refresh" content="0;url=http://www.baidu.com/">
+</html>
+[root@i-2hmqlu8t ~]#
+```
 
 ### 总结
 
