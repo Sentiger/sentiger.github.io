@@ -132,3 +132,78 @@ Content-Type: text/html
 
 1. nat转换使用tcp扩展的时候，一定要先指定-p tcp，然后再接其他参数。
 2. nat转换技术是不需要自己再次返转的，这是依赖于`nf_conntrack`模块，`/proc/net/nf_conntrack`记录转换信息，返回会自动帮转。
+
+
+## filter
+
+filter表主要是过滤数据的，这个也是经常所说的防火墙使用。防火墙规则：首先默认将所有的链都设置为DROP，然后再根据情况来放行。
+
+### 防火墙
+
+**关闭进出所有的流量**
+
+```shell
+# 先放行22端口，防止把自己关在外面了
+iptables -t filter -A INPUT -p tcp --dport 22 -j ACCEPT
+iptables -t filter -A OUTPUT -p tcp --sport 22 -j ACCEPT
+
+# 关闭默认允许规则
+iptables -t filter -P INPUT DROP
+iptables -t filter -P OUTPUT DROP
+iptables -t filter -P FORWARD DROP
+```
+
+**开启要访问的流量**
+
+```shell
+# 允许外网访问本机8080端口
+iptables -t filter -A INPUT -p tcp --dport 8080 -j ACCEPT
+iptables -t filter -A OUTPUT -p tcp --sport 8080 -j ACCEPT
+
+# 允许本机内网随便访问
+iptables -t filter -A INPUT -i lo -j ACCEPT 
+iptables -t filter -A OUTPUT -o lo -j ACCEPT
+
+# 设置本机能访问baidu
+## 1. 开放DNS端口53
+iptables -t filter -A INPUT -p tcp --sport 53 -j ACCEPT
+iptables -t filter -A INPUT -p udp --sport 53 -j ACCEPT
+iptables -t filter -A OUTPUT -p tcp --dport 53 -j ACCEPT
+iptables -t filter -A OUTPUT -p udp --dport 53 -j ACCEPT
+
+## 2. 开放baidu IP 110.242.68.66
+iptables -t filter -A OUTPUT --destination 110.242.68.66 -j ACCEPT
+iptables -t filter -A INPUT --source 110.242.68.66 -j ACCEPT
+
+# 对需要开放的流量按照上面一样设置就行，这样可以做到流量可控。但是存在一个问题，每次要设置这么多，下面介绍conntrack模块方便设置
+```
+
+**开启要访问的流量-便捷方法**
+
+上面设置流量的时候，每次要设置INPUT,和OUTPUT都要设置，很麻烦，下面使用conntrack扩展
+
+```shell
+# 先重置上面的规则
+iptables -t filter -P INPUT ACCEPT
+iptables -t filter -P OUTPUT ACCEPT
+iptables -t filter -F
+
+# 设置默认规则
+iptables -t filter -A INPUT -p tcp --dport 22 -j ACCEPT
+iptables -t filter -A OUTPUT -p tcp --sport 22 -j ACCEPT
+iptables -t filter -P INPUT DROP
+iptables -t filter -P OUTPUT DROP
+iptables -t filter -P FORWARD DROP
+iptables -A INPUT -i lo -j ACCEPT 
+iptables -A OUTPUT -o lo -j ACCEPT
+
+# 设置本机访问外网都可以访问
+iptables -t filter -A OUTPUT -m conntrack --ctstate NEW,ESTABLISHED -j ACCEPT
+iptables -t filter -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED, -j ACCEPT
+
+# 然后可以删除iptables -t filter -A OUTPUT -p tcp --sport 22 -j ACCEPT这个规则了
+iptables -t filter -D OUTPUT 1
+
+# 设置允许外网访问本机就只要设置INPUT了，无需在设置OUTPUT了
+iptables -t filter -A INPUT -p tcp --dport 8080 -j ACCEPT
+```
