@@ -28,7 +28,7 @@ static_resources:
     address:
       socket_address: { address: 0.0.0.0, port_value: 443 }
     listener_filters:
-      - name: "envoy.filters.listener.tls_inspector" # tls握手直接可以配置在listener_filters中做检查。这样当前listener中的filter都必须使用https
+      - name: "envoy.filters.listener.tls_inspector"
         typed_config:
           "@type": type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
     filter_chains:
@@ -50,8 +50,8 @@ static_resources:
           - name: envoy.filters.http.router
             typed_config:
               "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
-      filter_chain_match: # 这个主要配置域名过滤，因为filter是从上到下依次匹配的，如果配置多个hosts，则https握手时候，会发送SNI，就是这个作用
-        server_names: ["aa.xx.com","bb.xx.com"]
+      filter_chain_match:
+        server_names: ["aa.xx.com","bb.xx.com"] # 这个配置是针对https握手时候发送的SNI，http不配置该选项
       transport_socket: # 传输层socket配置，这里可以配置tls的加解密
         name: envoy.transport_sockets.tls
         typed_config:
@@ -76,3 +76,8 @@ static_resources:
               address:
                 socket_address: { address: 172.17.0.3, port_value: 80 }
 ```
+
+## 总结
+
+- `filter_chains.[*].filter_chain_match.server_names` 这个是tls握手时发送client hello中的SNI
+- 
