@@ -79,7 +79,7 @@ iptables -t nat -A POSTROUTING -p tcp --destination 47.97.173.91 --dport 80 -j M
 其实可以添加路由规则，让B中的默认网关是A机器就行。这样就能省去一个外网IP的费用了。
 
 ```shell
-# B主机内添加路由
+# B主机内添加路由(阿里云专有网络不可用,参考下面截图)
 ip route add default via 172.31.0.3
 
 # A主机添加nat转换，并且开启forward
@@ -89,6 +89,10 @@ iptables -t filter -P FORWARD ACCEPT
 iptables -t nat -A POSTROUTING -s 172.31.0.4 -j MASQUERADE
 
 ```
+
+**阿里云专有网络配置**
+
+![img.png](./assets/aliyun-snat.png)
 
 **测试**
 
