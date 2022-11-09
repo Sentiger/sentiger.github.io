@@ -6,7 +6,7 @@ category:
   - MySQL
 ---
 
-线上使用的是16核64G的服务器
+使用的是16核64G的服务器
 
 ```ini
 [mysqld]
