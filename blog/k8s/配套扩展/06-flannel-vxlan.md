@@ -101,7 +101,7 @@ listening on flannel.1, link-type EN10MB (Ethernet), capture size 262144 bytes
 16:26:13.251889 IP 1.1.0.1 > 1.1.0.2: ICMP echo request, id 4060, seq 4, length 64
 
 # 通过VETP设备发送UDP，上面已经构造出了完整的二层链路数据帧了。此时配合VTEP设备来发送到目的的主机。
-# 此时又出现了一个新的表FDB表，具体可以查阅，反正是配置了，VTEP就能自动将vxlan的数据发送到指定节点，其实目的是二层协议转换
+# 此时又出现了一个新的表FDB表，FDB本来是针对二层交换的映射，Linux针对vxlan做了扩展，可以设定UDP发送的远程IP
 [root@test1 ~]# bridge fdb append a2:be:c4:ef:4d:17 dev flannel.1 dst 192.168.56.42
 [root@test1 ~]# bridge fdb show dev flannel.1
 a2:be:c4:ef:4d:17 dst 192.168.56.42 self permanent

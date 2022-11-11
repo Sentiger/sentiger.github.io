@@ -112,7 +112,7 @@ flannel vxlan模式下，flanneld其实就是一个守护进程，来维护每�
        10.10.27.0 lladdr 2a:05:09:35:8d:19 PERMANENT
        10.10.62.0 lladdr 52:0c:d3:26:f4:f8 PERMANENT
 
-4.2. 目前已经构造了二层的数据帧，现在就是要通过vxlan vtep设备发送到目的主机，此时就是通过upd发送的。需要知道对方的ip。这里有一层转换
+4.2. 目前已经构造了二层的数据帧。在交换机上，一般通过哪个端口出去，这里有一张转换表FDB，对应MAC地址:端口号。但是linux针对vxlan单独兼容了，通过MAC:远程IP的映射关系。然后vxlan的设备通过这个IP将二层数据帧通过UDP发送出去
       [root@test1 soft]# bridge fdb show flannel.1
       2a:05:09:35:8d:19 dev flannel.1 dst 192.168.56.43 self permanent
       52:0c:d3:26:f4:f8 dev flannel.1 dst 192.168.56.42 self permanent
