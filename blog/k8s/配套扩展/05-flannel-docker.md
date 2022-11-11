@@ -40,7 +40,7 @@ $ docker exec -it etcd etcdctl put /flannel/network/config '{ "Network": "10.10.
 # 这里注意下载flannel的版本和服务器要能兼容，我这边测试服务器试了好多个版本，启动就报错，最终是centos7.6+flannel-v0.18.1
 $ wget https://github.com/flannel-io/flannel/releases/download/v0.18.1/flannel-v0.18.1-linux-amd64.tar.gz
 # 启动了flanneld，这个时候就会为本机分配自网段。而且会监听其他的主机加入进来之后自动发现网段，并加到本机路由（可查看上图）
-$ ./flanneld --etcd-endpoints=http://172.31.0.3:2379 --etcd-prefix=/flannel/network
+$ ./flanneld --iface=eth1 --etcd-endpoints=http://172.31.0.3:2379 --etcd-prefix=/flannel/network
 
 # 启动的时候这里可以看到给本机分配的子网，然后docker可以创建一个这个子网的网桥
 $ cat /var/run/flannel/subnet.env
@@ -66,7 +66,6 @@ $ docker inspect ngx1
 **web2启动flanneld**
 
 这里和web1一样，没任何区别，最终web2启动的ngx1 ip为 10.10.47.2
-
 
 **测试**
 
@@ -95,6 +94,30 @@ ETag: "61cb2d26-267"
 Accept-Ranges: bytes
 ```
 
+## 总结
+
+flannel vxlan模式下，flanneld其实就是一个守护进程，来维护每个node中的route,mac表,fdb表。
+
+```
+1. flanneld 启动的时候，根据配置生成该主机的子网，默认/var/run/flannel目录下
+
+2. 创建flannel.1 vxlan。可以通过 ip -d link show flannel.1可以查看具体的信息
+
+3. 监听其他node加入进来
+
+4. 一旦有node加入进来，则所有node节点的flanneld会监听，会把新的node信息写入到本node
+
+4.1 MAC地址写入，因为二层协议发送需要知道对方的mac
+       [root@test1 soft]# ip neigh show dev flannel.1
+       10.10.27.0 lladdr 2a:05:09:35:8d:19 PERMANENT
+       10.10.62.0 lladdr 52:0c:d3:26:f4:f8 PERMANENT
+
+4.2. 目前已经构造了二层的数据帧，现在就是要通过vxlan vtep设备发送到目的主机，此时就是通过upd发送的。需要知道对方的ip。这里有一层转换
+      [root@test1 soft]# bridge fdb show flannel.1
+      2a:05:09:35:8d:19 dev flannel.1 dst 192.168.56.43 self permanent
+      52:0c:d3:26:f4:f8 dev flannel.1 dst 192.168.56.42 self permanent
+
+```
 
 
 
