@@ -10,6 +10,8 @@ tag:
 
 ## DR模式
 
+![DR](./assets/lvs-DR.png)
+
 **环境**
 
 | 主机类型  | IP            | VIP           |
