@@ -103,7 +103,18 @@ route add -host 192.168.56.40 dev lo:1
 
 ![nat](./assets/lvs-NAT.png)
 
-nat模式比较简单，就是和iptable一样，通过修改源地址和源端口，目的ip和目的端口
+**nat模式流程**
+
+1. 客户端和real server不能在同一网段
+2. 客户端请求lvs，lvs修改目的IP或目的端口
+3. 请求被转发到real server，此时目的ip是自己，处理请求完
+4. 目的地址（客户端）和自己不在同一个网段，此时将数据发送给网关（这里网关要配置lvs）
+5. lvs接受到real server ，然后将目的ip进行修改为自己，从而转发给客户端。
+
+**注意**
+
+iptables是对src ip/scr port 和 des ip/port 同时进行修改
+
 
 
 
