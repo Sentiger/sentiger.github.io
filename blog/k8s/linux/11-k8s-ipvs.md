@@ -29,3 +29,11 @@ kubectl delete pods `kubectl get pods -n kube-system | grep kube-proxy  | awk '{
 # 本地的pod看情况重启
 ```
 
+## service访问慢问题
+
+新建立了一个集群，虽然两个不是同一个组内，但是也打通了内网通信。发现一个问题是访问pod很快，但是访问service慢，不是因为iptables模式
+
+搜索发现：
+
+`ethtool -K flannel.1 tx-checksum-ip-generic off`
+

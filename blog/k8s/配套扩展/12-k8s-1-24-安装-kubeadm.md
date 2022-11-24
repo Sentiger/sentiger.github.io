@@ -83,6 +83,9 @@ cp runc /usr/local/sbin/
 mkdir /etc/containerd
 containerd config default > /etc/containerd/config.toml
 
+# 修改containerd配置文件，sandbox_image
+sandbox_image = "registry.aliyuncs.com/google_containers/pause:3.8"
+
 # 启动containerd
 systemctl daemon-reload
 systemctl enable --now containerd
@@ -148,6 +151,12 @@ kubectl get pods -A
 
 ```
 
+## 注意：
+
+发现使用service的时候，在多节点情况下，肯能出现卡顿，不是因为iptable模式，搜索发现
+
+`ethtool -K flannel.1 tx-checksum-ip-generic off`
+
 ## 相关目录
 
 ```
@@ -160,6 +169,7 @@ kubectl get pods -A
 3. CNI 插件目录
 /opt/cni/bin/
 ```
+
 
 
 ## 相关名词
