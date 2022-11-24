@@ -37,3 +37,6 @@ kubectl delete pods `kubectl get pods -n kube-system | grep kube-proxy  | awk '{
 
 `ethtool -K flannel.1 tx-checksum-ip-generic off`
 
+参考：[checksum]
+
+[checksum]: https://blog.csdn.net/weixin_43292547/article/details/120690666
