@@ -7,7 +7,10 @@ category:
 
 ## k8s1.25安装ingress-nginx
 
-github地址:[ingress-nginx地址]
+- github地址:[ingress-nginx地址]
+- [ingress-nginx文档]
+
+
 [deploy]
 
 ### deploy配置修改
@@ -57,3 +60,5 @@ data:
 [ingress-nginx地址]: https://github.com/kubernetes/ingress-nginx/blob/main/docs/deploy/index.md
 
 [deploy]: https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.5.1/deploy/static/provider/cloud/deploy.yaml
+
+[ingress-nginx文档]: https://kubernetes.github.io/ingress-nginx/examples/rewrite/
