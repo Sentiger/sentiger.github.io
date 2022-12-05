@@ -56,6 +56,55 @@ data:
 3. 配置好可以进行日志查看，或者直接进入ingress-nginx-controller容器中查看nginx.conf，会发现有了对应的配置  
 ```
 
+## ingress-nginx配置后端https
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: rancher
+spec:
+  type: ClusterIP
+  ports:
+  - protocol: TCP
+    port: 443
+    targetPort: 8843
+    
+    
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: rancher
+subsets:
+- addresses:
+  - ip: 172.16.188.102
+  ports:
+  - port: 8843
+
+---
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rancher
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 5m
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: rancher.easyyun.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: rancher
+            port:
+              number: 443
+```
 
 [ingress-nginx地址]: https://github.com/kubernetes/ingress-nginx/blob/main/docs/deploy/index.md
 
