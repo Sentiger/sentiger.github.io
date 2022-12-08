@@ -449,6 +449,29 @@ if ok := any.MessageIs(user); ok {
 }
 ```
 
+### timestamp
+
+```
+import "google/protobuf/timestamp.proto";
+
+message User {
+  string  name = 1;
+  google.protobuf.Timestamp create_time = 2;
+}
+
+# 操作
+user := service.User{
+    Name:       "qiqi",
+    CreateTime: timestamppb.Now(),
+}
+
+user.CreateTime = timestamppb.New(time.Now())
+fmt.Println(user.CreateTime.IsValid())
+
+// 可以将timestamppb转换为对应语言的时间戳处理,然后就根据每个语言自己处理了
+goTimestamp := user.CreateTime.AsTime()
+
+```
 
 
 
