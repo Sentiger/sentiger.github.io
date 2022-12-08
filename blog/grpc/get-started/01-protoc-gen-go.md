@@ -5,6 +5,8 @@ category:
   - grpc
 ---
 
+下面介绍的都是参考`proto3`的
+
 ## protoc命令
 
 通过`protoc`和插件`protoc-gen-go`可以将`.proto`文件编译成`go`代码。下面介绍一下一些编译参数
@@ -163,3 +165,237 @@ protoc --proto_path=./  --go_out=./ --go_opt=Mservice/greeter.proto=aa.com/servi
     
 # 注意：
 ```
+
+## protobuf定义
+
+### 编译规则
+
+**message名字编译规则**
+
+`protobuf`编译是按照驼峰法进行编译生成`go`中的结构体，且是能导出的。例如下面：
+
+```protobuf
+syntax = "proto3";
+
+message FooA{}    // struct FooA{}
+message foo_b{}   // struct FooB{}
+message foo_C{}   // struct Foo_C{}
+message Foo_d{}   // struct FooD{}
+message Foo_E{}   // struct Foo_E{}
+
+// 编译后规则
+// 1. 就是根据驼峰法进行转换的
+// 2. 首写字母不管是什么变大写
+// 3. 下划线后面的小写字母变大写，然后去掉前面的下划线
+// 4. 下划线后面是大写字母，则下划线不变，大写字母也不变
+// 5. 总结：符合驼峰法变化就是：前面下划线去掉，然后后面字母大写，否则不给转换
+
+
+//针对于嵌套，其实也是定义了两个结构体 ，只是加了些前缀：会将父级别和当前的以下划线进行拼接，然后使用驼峰法进行转换
+
+message Foo {  // Foo->Foo->struct Foo{}
+  message Bar{} // Foo_Bar->Foo_Bar->struct Foo_Bar{}
+}
+
+message foo {  // foo ->Foo->struct Foo{}
+  message bar{} // foo_bar->FooBar->struct FooBar{}
+}
+
+```
+
+**field名字编译规则**
+
+也是和上面message一样遵循驼峰法编译转换。
+
+**总结**
+
+一般Message都是定义为驼峰法，field都是小写字母+下划线
+
+## 字段
+
+`protobuf`支持常见的`string`,`int`,`bool`,`bytes`和一些自定义类型以及一些高级`oneof`,`enum`,和扩展`any`等
+
+### 基本类型
+
+```
+message Gen {
+  int32 age = 1;  // int有很多类型，int32,64以及无符号的等
+  string name = 2;
+  bool home = 3;
+  bytes avatar = 4;
+}
+
+type Gen struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Age    int32  `protobuf:"varint,1,opt,name=age,proto3" json:"age,omitempty"` // int有很多类型，int32,64以及无符号的等
+	Name   string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Home   bool   `protobuf:"varint,3,opt,name=home,proto3" json:"home,omitempty"`
+	Avatar []byte `protobuf:"bytes,4,opt,name=avatar,proto3" json:"avatar,omitempty"`
+}
+```
+
+### 自定义类型
+
+```
+message Info {
+  string name = 1;
+}
+message UserDesign {
+  int32 age = 1;
+  Info info = 2;
+}
+
+type Info struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+}
+
+type UserDesign struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Age  int32 `protobuf:"varint,1,opt,name=age,proto3" json:"age,omitempty"`
+	Info *Info `protobuf:"bytes,2,opt,name=info,proto3" json:"info,omitempty"`
+}
+
+```
+
+### 数组/切片
+
+在字段前面使用`repeated`进行修饰
+
+```
+message Hobby {
+  repeated string name = 1;
+}
+
+type Hobby struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Name []string `protobuf:"bytes,1,rep,name=name,proto3" json:"name,omitempty"`
+}
+```
+
+### map
+
+支持map定义
+
+```
+message Hobby {
+  map<string, int32> user = 1;
+}
+
+type Hobby struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	User map[string]int32 `protobuf:"bytes,1,rep,name=user,proto3" json:"user,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"varint,2,opt,name=value,proto3"`
+}
+```
+
+### enum
+
+枚举其实就是定义一系列常量，然后这些常量以更加语义的形式表示。在格式上没有特别要求，其实也是一个int32类型
+
+```
+enum Corpus {
+  UNIVERSAL = 0;
+  WEB = 1;
+}
+message SearchRequest {
+  Corpus corpus = 1;
+}
+
+// 其实就是一个int32类型
+type Corpus int32
+
+type SearchRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Corpus Corpus `protobuf:"varint,1,opt,name=corpus,proto3,enum=service.Corpus" json:"corpus,omitempty"`
+}
+
+// 生成常量
+const (
+	Corpus_UNIVERSAL Corpus = 0
+	Corpus_WEB       Corpus = 1
+)
+
+// 而且会生成常量和语言内容的关联关系
+var (
+	Corpus_name = map[int32]string{
+		0: "UNIVERSAL",
+		1: "WEB",
+	}
+	Corpus_value = map[string]int32{
+		"UNIVERSAL": 0,
+		"WEB":       1,
+	}
+)
+```
+
+### oneof
+
+这个也是经常会用到的，例如在进行传输数据的时候，可能是两种类型（不确定是int,还是string），所以一般`go`中就是定义接口来实现
+
+```
+message Profile {
+  string name = 1;
+  oneof avatar {  // 传递头像的时候，可能是一个字符串，也可能是一个二进制数
+    string image_url = 2;
+    bytes image_data = 3;
+  }
+}
+
+// 所以编译的时候，会生成image_url,image_data结构体，来存放不值。然后Avatar 就是定义成一个接口，然后image_url,image_data结构体都实现这个接口
+// 接收端在接收数据的时候，可以根据断言匹配，做不同的操作Avatar.(*ImageUrl)
+
+type Profile struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// Types that are assignable to Avatar:
+	//	*Profile_ImageUrl
+	//	*Profile_ImageData
+	Avatar isProfile_Avatar `protobuf_oneof:"avatar"`
+}
+```
+
+
+### any
+
+```
+import "google/protobuf/any.proto";
+
+message A {
+  string message = 1;
+  google.protobuf.Any details = 2;
+}
+
+message User {
+  string  name = 1;
+}
+
+a, _ := anypb.New(&service.User{Name: "xx"})
+t := service.A{
+    Message: "33",
+    Details: a,
+}
+```
+
+
+
