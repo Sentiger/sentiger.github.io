@@ -378,6 +378,8 @@ type Profile struct {
 
 ### any
 
+`any`类型其实就是在`go`中的`interface`，不知道数据的具体类型，在接收到数据的时候，必须先要判断期类型，然后在进行使用：这个和`oneof`差不多
+
 ```
 import "google/protobuf/any.proto";
 
@@ -390,12 +392,64 @@ message User {
   string  name = 1;
 }
 
-a, _ := anypb.New(&service.User{Name: "xx"})
-t := service.A{
-    Message: "33",
-    Details: a,
+# 将一个message转换为any类型
+any, _ := anypb.New(&service.User{Name: "xx"})
+```
+
+**解析any到具体类型**
+
+解析any
+`any, _ := anypb.New(&service.User{Name: "xx"})`
+
+**1. 知道Any的具体类型，直接转换**
+```go
+// any是*Any类型的指针，这个是通过对方传递过来的
+user := new(service.User)
+if err := any.UnmarshalTo(user); err != nil {
+	log.Fatal("user any解析失败", err)
+}
+fmt.Println(user)
+```
+
+**2. 不知道Any的类型，通过断言**
+
+```go
+// 先将any转换为message类型
+// 然后通过message来进行断言，因为proto中定义的message生成go代码都实现message接口
+message, err := any.UnmarshalNew()
+if err != nil {
+    log.Fatal(err)
+}
+user, ok := message.(*service.User)
+fmt.Println(ok, user)
+```
+
+**3. 通过Switch类型判断**
+
+```go
+message, err := any.UnmarshalNew()
+if err != nil {
+    log.Fatal(err)
+}
+switch m := message.(type) {
+case *service.User:
+    fmt.Println("类型是user", m.Name)
+default:
+    fmt.Println("类型未知")
 }
 ```
+
+**4. 通过内置方法判断**
+
+```go
+user := new(service.User)
+if ok := any.MessageIs(user); ok {
+    _ = any.UnmarshalTo(user)
+    fmt.Println(user)
+}
+```
+
+
 
 
 
