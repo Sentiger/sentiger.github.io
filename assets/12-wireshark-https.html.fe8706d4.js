@@ -1,6 +1,0 @@
-import{_ as s}from"./plugin-vue_export-helper.21dcd24c.js";import{o as a,c as n,e}from"./app.6da40224.js";var l="/assets/wireshark.d14a4ff3.png",o="/assets/wireshark-chorm.ab262f92.png",i="/assets/wireshark-https.afdb22dd.png";const t={},r=e(`<div class="language-bash ext-sh line-numbers-mode"><pre class="language-bash"><code><span class="token function">sudo</span> /Applications/Google<span class="token punctuation">\\</span> Chrome.app/Contents/MacOS/Google<span class="token punctuation">\\</span> Chrome --ssl-key-log-file<span class="token operator">=</span>/Users/<span class="token variable"><span class="token variable">\`</span><span class="token function">whoami</span><span class="token variable">\`</span></span>/sslkeylog.log
-
-<span class="token function">chmod</span> <span class="token number">777</span> sslkeylog.log
-
-
-</code></pre><div class="line-numbers" aria-hidden="true"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p><img src="`+l+'" alt="" loading="lazy"></p><p><img src="'+o+'" alt="" loading="lazy"></p><p><img src="'+i+'" alt="" loading="lazy"></p>',4),p=[r];function c(d,m){return a(),n("div",null,p)}var _=s(t,[["render",c],["__file","12-wireshark-https.html.vue"]]);export{_ as default};
