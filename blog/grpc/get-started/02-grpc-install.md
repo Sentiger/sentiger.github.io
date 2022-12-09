@@ -1,6 +1,6 @@
 ---
 title: grpc插件安装
-order: 1
+order: 2
 category:
   - grpc
 ---
