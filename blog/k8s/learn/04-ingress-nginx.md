@@ -106,6 +106,29 @@ spec:
               number: 443
 ```
 
+## 自定义配置
+
+```yaml
+nginx.ingress.kubernetes.io/configuration-snippet: |
+  set $flag 0;
+  if ($uri !~ "^(.+\.php)") {
+       set $flag "${flag}1";
+  }
+  if ($uri !~ "^(.+\.html)") {
+       set $flag "${flag}2";
+  }
+  if ($flag = "012"){
+      rewrite ^/(.*)$ /index.php/$1 last;
+      break;
+  }
+  set $script    $uri;
+  set $path_info  "/";
+  if ($uri ~ "^(.+\.php)(/.+)") {
+          set $script     $1;
+          set $path_info  $2;
+  }
+```
+
 [ingress-nginx地址]: https://github.com/kubernetes/ingress-nginx/blob/main/docs/deploy/index.md
 
 [deploy]: https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.5.1/deploy/static/provider/cloud/deploy.yaml
