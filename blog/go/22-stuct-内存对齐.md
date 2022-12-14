@@ -66,9 +66,24 @@ func main() {
 	fmt.Println("T.b对齐偏移=", unsafe.Offsetof(t.b)) // 8
 	fmt.Println("T.c对齐偏移=", unsafe.Offsetof(t.c)) // 16
 	fmt.Println("T.d对齐偏移=", unsafe.Offsetof(t.d)) // 20
+
+	// 通过指针来修改结构体
+	*(*int8)(unsafe.Add(unsafe.Pointer(&t), unsafe.Offsetof(t.a))) = 1
+	*(*int64)(unsafe.Add(unsafe.Pointer(&t), unsafe.Offsetof(t.b))) = 2
+	*(*int32)(unsafe.Add(unsafe.Pointer(&t), unsafe.Offsetof(t.c))) = 3
+	*(*int16)(unsafe.Add(unsafe.Pointer(&t), unsafe.Offsetof(t.d))) = 4
+
+	fmt.Printf("%+v\n", t)
+
+	// 这个是创建一个类型为T的数组，长度和length都是2，切片起始位置为&t的位置
+	at := unsafe.Slice(&t, 2)
+	fmt.Println(at[0].c)
+	t.d = 333
+	fmt.Println(at)
 }
 
-运行结果：
+# 输出结果
+
 T.a对齐= 1
 T.b对齐= 8
 T.c对齐= 4
@@ -79,5 +94,8 @@ T.a对齐偏移= 0
 T.b对齐偏移= 8
 T.c对齐偏移= 16
 T.d对齐偏移= 20
+{a:1 b:2 c:3 d:4}
+3
+[{1 2 3 333} {1 2 3 4}]
 
 ```
