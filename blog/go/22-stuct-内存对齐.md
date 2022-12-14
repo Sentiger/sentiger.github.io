@@ -35,3 +35,49 @@ type T struct {
 
 ![](./assets/struct-memory-align.png)
 
+```go
+package main
+
+import (
+	"fmt"
+	"unsafe"
+)
+
+type T struct {
+	a int8  // 1 byte
+	b int64 // 8 byte
+	c int32 // 4 byte
+	d int16 // 2 byte
+}
+
+func main() {
+	t := T{}
+
+	fmt.Println("T.a对齐=", unsafe.Alignof(t.a)) // 1
+	fmt.Println("T.b对齐=", unsafe.Alignof(t.b)) // 8
+	fmt.Println("T.c对齐=", unsafe.Alignof(t.c)) // 4
+	fmt.Println("T.d对齐=", unsafe.Alignof(t.d)) // 2
+
+	fmt.Println("T对齐=", unsafe.Alignof(t)) // 8
+
+	fmt.Println("T类型size=", unsafe.Sizeof(t)) //	24, 成员变量需要内存对齐，然后整体的T需要内存对齐（这个是为了如果定义一个T类型的数组)
+
+	fmt.Println("T.a对齐偏移=", unsafe.Offsetof(t.a)) // 0
+	fmt.Println("T.b对齐偏移=", unsafe.Offsetof(t.b)) // 8
+	fmt.Println("T.c对齐偏移=", unsafe.Offsetof(t.c)) // 16
+	fmt.Println("T.d对齐偏移=", unsafe.Offsetof(t.d)) // 20
+}
+
+运行结果：
+T.a对齐= 1
+T.b对齐= 8
+T.c对齐= 4
+T.d对齐= 2
+T对齐= 8
+T类型size= 24
+T.a对齐偏移= 0
+T.b对齐偏移= 8
+T.c对齐偏移= 16
+T.d对齐偏移= 20
+
+```
