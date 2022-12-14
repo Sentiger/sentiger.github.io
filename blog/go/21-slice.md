@@ -30,7 +30,7 @@ import (
 )
 
 type myslice struct {
-	data unsafe.Pointer // *int32/int
+	data unsafe.Pointer // *int64/int
 	len  int
 	cap  int
 }
