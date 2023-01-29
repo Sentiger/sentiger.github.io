@@ -50,11 +50,18 @@ CNI_COMMAND=ADD CNI_CONTAINERID=lab-ns CNI_NETNS=/var/run/netns/testing CNI_IFNA
 
 ## 开发CNI插件流程
 
+1. 下载第三方库（封装好获取标准输入，输出，等基本统一操作，提供对应的接口，自己实现插件 
+
 ```
-1. 下载第三方库（封装好获取标准输入，输出，等基本统一操作，提供对应的接口，自己实现插件
+
 go get github.com/containernetworking/cni
 
+```
+
 2. 通过库编写实现业务
+
+```
+
 
 package main
 
@@ -104,6 +111,24 @@ func cmdCheck(args *skel.CmdArgs) error {
 func cmdDel(args *skel.CmdArgs) error {
 	return nil
 }
+```
+
+3. 使用第三方网络库来实现
+
+```
+
+在编写代码的时候，很多网络配置，设置，这个时候就需要使用一些第三方封装好的库。
+
+# 各种插件的一些实现
+github.com/containernetworking/plugins
+
+
+# ioctl (ifconfig)
+
+
+# netlink (ip 命令) 
+github.com/vishvananda/netlink
+
 ```
 
 
