@@ -106,6 +106,74 @@ spec:
               number: 443
 ```
 
+## 配置https代理服务，且证书认证
+
+通过ingress代理后端`apiserver`
+
+**nginx的原始配置是这样**
+
+```
+proxy_pass                https://backend.example.com;
+proxy_ssl_certificate     /etc/nginx/client.pem;
+proxy_ssl_certificate_key /etc/nginx/client.key;
+```
+
+**生命`tls`秘钥**
+
+```shell
+# 这里的kubernetes-admin.crt,kubernetes-admin.crt,kubernetes-admin.key是装k8s中生成的kubectl中的。可以自己定义，ca.crt是api-server中的/etc/kubernetes/pki/ca.key
+kubectl create secret generic apiserver --from-file=tls.crt=kubernetes-admin.crt --from-file=tls.key=kubernetes-admin.key --from-file=ca.crt=kubernetes-admin.crt
+```
+
+```yaml
+# 通过ingress暴露apiserver
+apiVersion: v1
+kind: Service
+metadata:
+  name: apiserver
+spec:
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      port: 443
+      targetPort: 6443
+
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: apiserver
+subsets:
+  - addresses:
+      - ip: 172.16.177.102
+    ports:
+      - port: 6443
+---
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: apiserver
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 5m
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+    # 设置秘钥namespace/秘钥存放的secret,这里面一定是tls.cert,tls.key,ca.crt，这里开始少了一个ca.crt，找了好久，然后查源码找问题了
+    nginx.ingress.kubernetes.io/proxy-ssl-secret: "default/apiserver"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: apiserver.easyyun.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: apiserver
+                port:
+                  number: 443
+```
+
 ## 自定义配置
 
 ```yaml
