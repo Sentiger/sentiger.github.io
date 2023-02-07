@@ -477,6 +477,72 @@ credential 英 [krəˈdenʃl] [n] 凭据；资质；证件；国书 主要是资
 kubectl config set-credentials myuser --client-key=myuser.key --client-certificate=myuser.crt --embed-certs=true
 ```
 
+## apiserver新增域名/ip
+
+**https验证主要过程**
+
+1. 客户端请求服务端，服务端返回客户端证书文件（crt） 
+2. 客户端验证crt证书找到本地的ca根证书，一般浏览器都会安装（这个过程就是验证服务端证书是否是根证书颁发的）openssl verify -CAfile ca.crt server.crt 
+3. 客户端获取服务端证书，然后要验证当前请求host是否和服务端返回的证书中的subject或subjectAltName能匹配上，如果匹配不上，则host错误
+4. 验证通过则提取服务端证书公钥验证发送过来的内容。（生成接下来的对称加密公钥） 
+5. 交换对称加密算法的公钥和选择对称加密的算法 
+6. 使用对称加密算法加密传输内容
+
+
+**更换证书**
+
+```shell
+# 查看证书信息
+openssl x509 -noout -text -in apiserver.crt
+
+# 备份证书
+cp -R /etc/kubernetes/pki /etc/kubernetes/pki-backup
+
+# 获取kubadm的配置文件
+kubectl -n kube-system get configmap kubeadm-config -o jsonpath='{.data.ClusterConfiguration}' > kubeadm.yaml
+
+# 修改kubeadm.yaml,certSANs
+
+apiServer:
+  certSANs:
+  # 新增IP，这里默认我服务器上是空的，最好是查看历史证书中的这些字段，都加上。默认的DNS是加上了。
+  - "127.0.0.1"
+  - "192.168.56.11"
+  extraArgs:
+    authorization-mode: Node,RBAC
+  timeoutForControlPlane: 4m0s
+apiVersion: kubeadm.k8s.io/v1beta3
+certificatesDir: /etc/kubernetes/pki
+clusterName: kubernetes
+controllerManager: {}
+dns: {}
+etcd:
+  local:
+    dataDir: /var/lib/etcd
+imageRepository: registry.aliyuncs.com/google_containers
+kind: ClusterConfiguration
+kubernetesVersion: v1.25.3
+networking:
+  dnsDomain: cluster.local
+  podSubnet: 172.30.0.0/16
+  serviceSubnet: 172.16.0.0/16
+scheduler: {}
+
+
+# 删除apiserver.crt, apiserver.key并生成新的
+kubeadm init phase certs apiserver --config kubeadm.yaml
+
+# 默认是会将dns自动加上
+[certs] Generating "apiserver" certificate and key
+[certs] apiserver serving cert is signed for DNS names [kubernetes kubernetes.default kubernetes.default.svc kubernetes.default.svc.cluster.local master1] and IPs [172.16.0.1 10.0.2.15 127.0.0.1 192.168.56.11]
+
+# 删除apiserver的pod（会自动重启）
+kubectl -n kube-system delete pod kube-apiserver-master1
+
+```
+
+
+
 **参考**
 - [文档]
 - [认证]
