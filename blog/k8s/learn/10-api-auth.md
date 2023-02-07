@@ -483,7 +483,7 @@ kubectl config set-credentials myuser --client-key=myuser.key --client-certifica
 
 1. 客户端请求服务端，服务端返回客户端证书文件（crt） 
 2. 客户端验证crt证书找到本地的ca根证书，一般浏览器都会安装（这个过程就是验证服务端证书是否是根证书颁发的）openssl verify -CAfile ca.crt server.crt 
-3. 客户端获取服务端证书，然后要验证当前请求host是否和服务端返回的证书中的subject或subjectAltName能匹配上，如果匹配不上，则host错误
+3. 客户端获取服务端证书，然后要验证当前请求host是否和服务端返回的证书中的subjectAltName(备用名)能匹配上，如果匹配不上，则host错误
 4. 验证通过则提取服务端证书公钥验证发送过来的内容。（生成接下来的对称加密公钥） 
 5. 交换对称加密算法的公钥和选择对称加密的算法 
 6. 使用对称加密算法加密传输内容
