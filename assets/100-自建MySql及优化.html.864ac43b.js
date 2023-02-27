@@ -1,0 +1,36 @@
+import{_ as n}from"./plugin-vue_export-helper.21dcd24c.js";import{o as a,c as s,e}from"./app.a872a782.js";const t={},l=e(`<p>\u4F7F\u7528\u7684\u662F16\u683864G\u7684\u670D\u52A1\u5668</p><div class="language-ini ext-ini line-numbers-mode"><pre class="language-ini"><code><span class="token section"><span class="token punctuation">[</span><span class="token section-name selector">mysqld</span><span class="token punctuation">]</span></span>
+<span class="token key attr-name">datadir</span><span class="token punctuation">=</span><span class="token value attr-value">/var/lib/mysql</span>
+<span class="token key attr-name">socket</span><span class="token punctuation">=</span><span class="token value attr-value">/var/lib/mysql/mysql.sock</span>
+<span class="token key attr-name">pid-file</span><span class="token punctuation">=</span><span class="token value attr-value">/var/run/mysqld/mysqld.pid</span>
+
+<span class="token comment"># error log</span>
+<span class="token key attr-name">log-error</span><span class="token punctuation">=</span><span class="token value attr-value">/var/log/mysql/mysqld.log</span>
+
+<span class="token comment"># flow log config</span>
+<span class="token key attr-name">slow_query_log</span><span class="token punctuation">=</span><span class="token value attr-value">ON</span>
+<span class="token key attr-name">slow_query_log_file</span><span class="token punctuation">=</span><span class="token value attr-value">/var/log/mysql/slow_query.log</span>
+<span class="token key attr-name">long_query_time</span><span class="token punctuation">=</span><span class="token value attr-value">2</span>
+<span class="token key attr-name">log_output</span><span class="token punctuation">=</span><span class="token value attr-value">TABLE</span>
+<span class="token key attr-name">log_timestamps</span><span class="token punctuation">=</span><span class="token value attr-value">SYSTEM</span>
+<span class="token key attr-name">log_queries_not_using_indexes</span><span class="token punctuation">=</span><span class="token value attr-value">OFF</span>
+<span class="token key attr-name">min_examined_row_limit</span><span class="token punctuation">=</span><span class="token value attr-value">0</span>
+<span class="token key attr-name">log_slow_admin_statements</span><span class="token punctuation">=</span><span class="token value attr-value">OFF</span>
+
+<span class="token comment"># general</span>
+<span class="token key attr-name">lower_case_table_names</span><span class="token punctuation">=</span><span class="token value attr-value">1</span>
+<span class="token key attr-name">character_set_server</span><span class="token punctuation">=</span><span class="token value attr-value">utf8</span>
+<span class="token key attr-name">validate_password_policy</span><span class="token punctuation">=</span><span class="token value attr-value">low</span>
+
+<span class="token comment"># innodb</span>
+<span class="token key attr-name">innodb_buffer_pool_size</span><span class="token punctuation">=</span><span class="token value attr-value">48049946624</span>
+<span class="token key attr-name">join_buffer_size</span><span class="token punctuation">=</span><span class="token value attr-value">442368</span>
+<span class="token key attr-name">sort_buffer_size</span><span class="token punctuation">=</span><span class="token value attr-value">262144</span>
+<span class="token key attr-name">read_rnd_buffer_size</span><span class="token punctuation">=</span><span class="token value attr-value">442368</span>
+<span class="token key attr-name">thread_cache_size</span><span class="token punctuation">=</span><span class="token value attr-value">100</span>
+<span class="token key attr-name">tmp_table_size</span><span class="token punctuation">=</span><span class="token value attr-value">2097152</span>
+
+<span class="token comment">#thread_pool_size=2</span>
+
+<span class="token key attr-name">symbolic-links</span><span class="token punctuation">=</span><span class="token value attr-value">0</span>
+</code></pre><div class="line-numbers" aria-hidden="true"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><h2 id="\u53C2\u6570\u4F18\u5316" tabindex="-1"><a class="header-anchor" href="#\u53C2\u6570\u4F18\u5316" aria-hidden="true">#</a> \u53C2\u6570\u4F18\u5316</h2><h3 id="join-buffer-size" tabindex="-1"><a class="header-anchor" href="#join-buffer-size" aria-hidden="true">#</a> join_buffer_size</h3><p>\u5728\u8FDE\u63A5\u67E5\u8BE2\u7684\u65F6\u5019\uFF0C\u9A71\u52A8\u8868\u53EA\u67E5\u8BE2\u4E00\u6B21\uFF0C\u88AB\u9A71\u52A8\u8868\u4F1A\u67E5\u8BE2N\u6B21\uFF0C\u5177\u4F53\u770B\u9A71\u52A8\u8868\u4E2D\u8FD4\u56DE\u7684\u8BB0\u5F55\u6570\u3002</p><p>\u4F46\u662F\u5BF9\u4E8E\u88AB\u9A71\u52A8\u8868\u6765\u8BF4\uFF0C\u662F\u57FA\u4E8E\u9A71\u52A8\u8868\u8BB0\u5F55\u4E2D\u505A\u7B49\u503C\u67E5\u8BE2\uFF0C\u6240\u4EE5\u6B64\u65F6\u4F18\u5316\uFF0C\u5982\u679C\u88AB\u9A71\u52A8\u8868\u4E2D\u7684\u7B49\u503C\u67E5\u8BE2\u53EF\u4EE5\u52A0\u4E0A\u7D22\u5F15\u3002</p><p>\u5982\u679C\u5982\u679C\u88AB\u9A71\u52A8\u8868\u6CA1\u6709\u7D22\u5F15\uFF0C\u5219\u662F\u4F1A\u8FDB\u884CN\u6B21\u5168\u8868\u626B\u63CF\uFF0C\u4E00\u6B21\u5BF9\u6BD4\uFF0C\u6240\u4EE5\u4E3A\u4E86\u66F4\u4E00\u6B65\u4F18\u5316\uFF0C\u53EF\u4EE5\u5168\u8868\u626B\u63CF\u4E00\u6B21\uFF0C\u5C06\u626B\u63CF\u7684\u7ED3\u679C\u5B58\u653E\u5230\u5185\u5B58\u4E2D\uFF0C\u7136\u540E\u548C\u9A71\u52A8\u8868\u4E2D\u7684\u8BB0\u5F55\u4E00\u6B21\u5BF9\u6BD4\u3002\u8FD9\u91CC\u7684\u5185\u5B58\u5C31\u662F<code>join_buffer_size</code>\u3002</p><p>\u6240\u4EE5join\u67E5\u8BE2\u7684\u65F6\u5019\uFF0C\u5C3D\u53EF\u80FD\u8BA9\u6570\u636E\u5C0F\uFF0C\u8FD9\u6837<code>join_buffer_size</code>\u5C31\u80FD\u5B58\u653E\u66F4\u591A\u7684\u8BB0\u5F55\u3002\u6240\u4EE5\u4E00\u822C\u4E0D\u5EFA\u8BAE<code>*</code>\u67E5\u8BE2\u3002</p><div class="language-text ext-text line-numbers-mode"><pre class="language-text"><code>join_buffer_size=442368
+</code></pre><div class="line-numbers" aria-hidden="true"><div class="line-number"></div></div></div>`,9),i=[l];function p(c,o){return a(),s("div",null,i)}var v=n(t,[["render",p],["__file","100-\u81EA\u5EFAMySql\u53CA\u4F18\u5316.html.vue"]]);export{v as default};
